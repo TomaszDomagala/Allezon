@@ -14,7 +14,9 @@ docker build -t kubesplay kubesplay/
 ```
 
 5. Run the `setup-cluster.sh` script. This will run the kubesplay container and run the ansible playbooks that will set up the cluster (it may take a while, around 20 minutes).
-If everything goes well that should be it.
+After successful setup there is one more script to execute on your master node, `ubuntu-fix.sh`. Without it you wont be able to run `kubectl get nodes` for example. 
+
+
 The `cluster` ansible inventory was generated as specified in the [kubesplay quick start guide](https://github.com/kubernetes-sigs/kubespray#quick-start).
 You may want to generate your own (replace hosts.yaml with your own). The `hosts-ips.sh` script can help you with obtaining the ips of the vms.
 
