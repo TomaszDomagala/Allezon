@@ -1,0 +1,10 @@
+go 1.19
+
+use (
+	libs/types
+	services/api
+)
+
+replace (
+	github.com/TomaszDomagala/Allezon/src/libs/types v0.0.0 => ./libs/types
+)
