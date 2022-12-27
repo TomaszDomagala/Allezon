@@ -14,4 +14,4 @@ docker run --rm -it \
     --mount type=bind,source="$(pwd)"/cluster,dst=/inventory \
     --mount type=bind,source="${HOME}"/.ssh/id_rsa,dst=/root/.ssh/id_rsa \
     --mount type=bind,source="$(pwd)"/ubuntu-fix.yaml,dst=/ubuntu-fix.yaml \
-    kubesplay ansible-playbook -u "$USERNAME" -i /inventory/hosts.yaml --private-key /root/.ssh/id_rsa --become /ubuntu-fix.yaml
+    kubespray ansible-playbook -u "$USERNAME" -i /inventory/hosts.yaml --private-key /root/.ssh/id_rsa --become /ubuntu-fix.yaml
