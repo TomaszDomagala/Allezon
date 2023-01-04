@@ -3,11 +3,13 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Shopify/sarama"
-	"github.com/TomaszDomagala/Allezon/src/libs/types"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
+
+	"github.com/Shopify/sarama"
+	"github.com/gin-gonic/gin"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 type ProductInfo struct {

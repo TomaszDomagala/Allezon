@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/TomaszDomagala/Allezon/src/services/api/server"
 	"log"
+
+	"github.com/TomaszDomagala/Allezon/src/cmd/api/server"
 )
 
 func main() {
