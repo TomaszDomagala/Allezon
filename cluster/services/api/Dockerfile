@@ -14,7 +14,7 @@ RUN go mod download
 
 COPY . .
 
-WORKDIR /src/services/api
+WORKDIR /src/cmd/api
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /usr/bin/api
