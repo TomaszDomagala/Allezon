@@ -13,4 +13,4 @@ export $(cat .vms | xargs)
 docker run --rm -it \
     --mount type=bind,source="$(pwd)"/cluster,dst=/inventory \
     --mount type=bind,source="${HOME}"/.ssh/id_rsa,dst=/root/.ssh/id_rsa \
-    kubespray ansible-playbook -u "$USERNAME" -i /inventory/hosts.yaml --private-key /root/.ssh/id_rsa --become cluster.yml
+    kubespray ansible-playbook -u "$USERNAME" -i /inventory/hosts.yaml --private-key /root/.ssh/id_rsa --become --timeout 60 cluster.yml
