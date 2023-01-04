@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: api
-          image: services/api:0.0.1
+          image: allezon/api:0.0.1
           ports:
             - containerPort: 8080

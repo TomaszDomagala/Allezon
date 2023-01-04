@@ -1,4 +1,4 @@
-module github.com/TomaszDomagala/Allezon/src/services/api
+module github.com/TomaszDomagala/Allezon/src
 
 go 1.19
 
