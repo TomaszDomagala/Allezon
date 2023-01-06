@@ -30,7 +30,7 @@ func main() {
 		}
 	}
 
-	srv := server.New(producer)
+	srv := server.New(logger, producer)
 
 	if err := srv.Run(); err != nil {
 		//log.Fatalf("Error while running a server, %s", err)

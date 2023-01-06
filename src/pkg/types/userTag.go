@@ -20,7 +20,7 @@ const (
 )
 
 type ProductInfo struct {
-	ProductId  string
+	ProductId  int
 	BrandId    string
 	CategoryId string
 	Price      int32
