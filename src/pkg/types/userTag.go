@@ -20,18 +20,18 @@ const (
 )
 
 type ProductInfo struct {
-	ProductId  string
-	BrandId    string
-	CategoryId string
-	Price      int32
+	ProductId  int    `json:"product_id"`
+	BrandId    string `json:"brand_id"`
+	CategoryId string `json:"category_id"`
+	Price      int32  `json:"price"`
 }
 
 type UserTag struct {
-	Time        time.Time
-	Cookie      string
-	Country     string
-	Device      Device
-	Action      Action
-	Origin      string
-	ProductInfo ProductInfo
+	Time        time.Time   `json:"time"`
+	Cookie      string      `json:"cookie"`
+	Country     string      `json:"country"`
+	Device      Device      `json:"device"`
+	Action      Action      `json:"action"`
+	Origin      string      `json:"origin"`
+	ProductInfo ProductInfo `json:"product_info"`
 }

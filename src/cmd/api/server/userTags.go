@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 )
 
 type ProductInfo struct {
-	ProductId  string `json:"product_id"`
+	ProductId  int    `json:"product_id"`
 	BrandId    string `json:"brand_id"`
 	CategoryId string `json:"category_id"`
 	Price      int32  `json:"price"`
@@ -104,14 +105,22 @@ func (s server) sendUserTag(tag types.UserTag) error {
 
 func (s server) userTagsHandler(c *gin.Context) {
 	var req UserTagsRequest
-	if err := c.BindJSON(&req); err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+
+	body, err := c.GetRawData()
+	if err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		s.logger.Error("can't unmarshal request: %s", zap.Error(err), zap.ByteString("body", body))
+		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
 	userTag, err := req.ToUserTag()
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		s.logger.Error("can't convert request to user tag: %s", zap.Error(err), zap.ByteString("body", body))
+		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 	if err := s.sendUserTag(userTag); err != nil {
