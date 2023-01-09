@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Shopify/sarama"
 	"github.com/gin-gonic/gin"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
@@ -88,21 +87,6 @@ func (r *UserTagsRequest) ToUserTag() (types.UserTag, error) {
 	}, nil
 }
 
-func (s server) sendUserTag(tag types.UserTag) error {
-	data, err := json.Marshal(tag)
-	if err != nil {
-		return err
-	}
-
-	msg := &sarama.ProducerMessage{
-		Topic: types.UserTagsTopic,
-		Value: sarama.ByteEncoder(data),
-	}
-
-	_, _, err = s.kafkaProducer.SendMessage(msg)
-	return err
-}
-
 func (s server) userTagsHandler(c *gin.Context) {
 	var req UserTagsRequest
 
@@ -123,7 +107,7 @@ func (s server) userTagsHandler(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	if err := s.sendUserTag(userTag); err != nil {
+	if err := s.producer.Send(userTag); err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}

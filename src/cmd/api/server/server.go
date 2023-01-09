@@ -1,7 +1,9 @@
 package server
 
 import (
-	"github.com/Shopify/sarama"
+	"fmt"
+	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
+	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"time"
@@ -14,22 +16,26 @@ type Server interface {
 }
 
 type server struct {
-	logger        *zap.Logger
-	engine        *gin.Engine
-	kafkaProducer sarama.SyncProducer
+	conf     *config.Config
+	logger   *zap.Logger
+	engine   *gin.Engine
+	producer messaging.UserTagProducer
 }
 
 func (s server) Run() error {
-	return s.engine.Run()
+	s.logger.Info("Starting server", zap.Int("port", s.conf.Port))
+	return s.engine.Run(fmt.Sprintf(":%d", s.conf.Port))
 }
 
-func New(logger *zap.Logger, producer sarama.SyncProducer) Server {
+func New(logger *zap.Logger, cfg *config.Config, producer messaging.UserTagProducer) Server {
 	router := gin.New()
 
 	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
 	router.Use(ginzap.RecoveryWithZap(logger, true))
 
-	s := server{engine: router, kafkaProducer: producer, logger: logger}
+	s := server{engine: router, producer: producer, logger: logger, conf: cfg}
+
+	router.GET("/health", s.health)
 
 	router.POST("/user_tags", s.userTagsHandler)
 	router.POST("/user_profiles/:cookie", s.userProfilesHandler)

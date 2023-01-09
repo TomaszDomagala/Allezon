@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
@@ -20,17 +19,17 @@ func main() {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
-	var producer sarama.SyncProducer
-	if conf.NullProducer {
+	var producer messaging.UserTagProducer
+	if conf.KafkaNullProducer {
 		producer = messaging.NewNullProducer(logger)
 	} else {
-		producer, err = newProducer()
+		producer, err = messaging.NewProducer(logger, conf.KafkaAddresses)
 		if err != nil {
 			logger.Fatal("Error while creating producer", zap.Error(err))
 		}
 	}
 
-	srv := server.New(logger, producer)
+	srv := server.New(logger, conf, producer)
 
 	if err := srv.Run(); err != nil {
 		//log.Fatalf("Error while running a server, %s", err)

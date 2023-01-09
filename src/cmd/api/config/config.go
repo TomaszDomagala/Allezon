@@ -3,8 +3,13 @@ package config
 import "github.com/spf13/viper"
 
 type Config struct {
-	EchoMode     bool `mapstructure:"echo_mode"`
-	NullProducer bool `mapstructure:"null_producer"`
+	// Server options
+	Port     int  `mapstructure:"port"`
+	EchoMode bool `mapstructure:"echo_mode"`
+
+	// Kafka options
+	KafkaNullProducer bool     `mapstructure:"kafka_null_producer"`
+	KafkaAddresses    []string `mapstructure:"kafka_addresses"`
 }
 
 func field(name string, defaultValue any) {
@@ -13,8 +18,11 @@ func field(name string, defaultValue any) {
 }
 
 func New() (*Config, error) {
+	field("port", 8080)
 	field("echo_mode", false)
-	field("null_producer", false)
+
+	field("kafka_null_producer", false)
+	field("kafka_addresses", []string{})
 
 	var c Config
 	_ = viper.Unmarshal(&c)
