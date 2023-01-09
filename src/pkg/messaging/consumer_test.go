@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var timeout = time.Second * 5
+var timeout = time.Second * 20
 
 func (s *MessagingSuite) TestNewConsumer() {
 	_, err := NewConsumer(s.logger, []string{hostPort})
@@ -17,16 +17,15 @@ func (s *MessagingSuite) TestNewConsumer() {
 }
 
 func (s *MessagingSuite) TestConsumer_Consume() {
-	s.T().Skip() // TODO: fix this test
-	
+	//s.T().Skip() // TODO: fix this test
+
 	producer, err := NewProducer(s.logger, []string{hostPort})
 	s.Require().NoErrorf(err, "failed to create producer")
 
 	consumer, err := NewConsumer(s.logger, []string{hostPort})
 	s.Require().NoErrorf(err, "failed to create consumer")
 
-	tags := make(chan types.UserTag)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	var sendTags []types.UserTag
 	for i := 0; i < 10; i++ {
@@ -41,11 +40,11 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 	go func() {
 		defer wg.Done()
 		s.logger.Debug("sending tags")
-		for tag := range tags {
+		for _, tag := range sendTags {
 			err := producer.Send(tag)
-			s.logger.Debug("sent tag", zap.Any("tag", tag))
 			s.Assert().NoErrorf(err, "failed to send tag %v", tag.Cookie)
 		}
+		s.logger.Debug("finished sending tags")
 	}()
 	go func() {
 		defer wg.Done()
@@ -53,18 +52,23 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 
 		err := consumer.Consume(ctx, recTags)
 		s.Assert().NoErrorf(err, "failed to consume tags")
+		s.logger.Debug("finished consuming tags")
 	}()
 
-	wg.Wait()
-	cancel()
-
-	for _, tag := range sendTags {
+	var tags []types.UserTag
+	for i := 0; i < len(sendTags); i++ {
 		select {
-		case recTag := <-recTags:
-			s.Assert().Equalf(tag, recTag, "received tag does not match sent tag")
-		case <-ctx.Done():
-			s.Fail("context timed out")
+		case tag := <-recTags:
+			tags = append(tags, tag)
+			s.logger.Debug("received tag", zap.Any("tag", tag))
+		case <-time.After(timeout):
+			s.FailNow("timed out waiting for tags")
 		}
 	}
+	cancel()
+
+	wg.Wait()
+
+	s.Require().Equalf(sendTags, tags, "received tags do not match sent tags")
 
 }

@@ -56,7 +56,7 @@ func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error
 			// recreated to get the new claims
 			if errConsume = c.client.Consume(ctx, []string{types.UserTagsTopic}, &handler); errConsume != nil {
 				c.logger.Error("failed to consume messages", zap.Error(errConsume))
-				break
+				return
 			}
 			// check if context was cancelled, signaling that the consumer should stop
 			if ctx.Err() != nil {

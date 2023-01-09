@@ -37,8 +37,9 @@ func (p *Producer) Send(tag types.UserTag) error {
 		return fmt.Errorf("failed to marshal user tag: %w", err)
 	}
 	_, _, err = p.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: types.UserTagsTopic,
-		Value: sarama.ByteEncoder(tagJson),
+		Topic:     types.UserTagsTopic,
+		Value:     sarama.ByteEncoder(tagJson),
+		Partition: 0,
 	})
 
 	logOpts := []zap.Field{
