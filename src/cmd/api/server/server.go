@@ -19,7 +19,7 @@ type server struct {
 	conf     *config.Config
 	logger   *zap.Logger
 	engine   *gin.Engine
-	producer messaging.UserTagProducer
+	producer messaging.UserTagsProducer
 }
 
 func (s server) Run() error {
@@ -27,7 +27,7 @@ func (s server) Run() error {
 	return s.engine.Run(fmt.Sprintf(":%d", s.conf.Port))
 }
 
-func New(logger *zap.Logger, cfg *config.Config, producer messaging.UserTagProducer) Server {
+func New(logger *zap.Logger, cfg *config.Config, producer messaging.UserTagsProducer) Server {
 	router := gin.New()
 
 	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))

@@ -12,9 +12,12 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
-const UserTagConsumerGroup = "user-tag-consumer-group"
+const (
+	UserTagsTopic         = "user-tags"
+	UserTagsConsumerGroup = "user-tags-consumer-group"
+)
 
-type UserTagConsumer interface {
+type UserTagsConsumer interface {
 	Receive() (<-chan types.UserTag, error)
 }
 
@@ -24,7 +27,10 @@ type Consumer struct {
 }
 
 func NewConsumer(logger *zap.Logger, addresses []string) (*Consumer, error) {
-	consumer, err := sarama.NewConsumerGroup(addresses, UserTagConsumerGroup, nil)
+	config := sarama.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+
+	consumer, err := sarama.NewConsumerGroup(addresses, UserTagsConsumerGroup, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
@@ -54,7 +60,7 @@ func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error
 			// `Consume` should be called inside an infinite loop, when a
 			// server-side rebalance happens, the consumer session will need to be
 			// recreated to get the new claims
-			if errConsume = c.client.Consume(ctx, []string{types.UserTagsTopic}, &handler); errConsume != nil {
+			if errConsume = c.client.Consume(ctx, []string{UserTagsTopic}, &handler); errConsume != nil {
 				c.logger.Error("failed to consume messages", zap.Error(errConsume))
 				return
 			}
@@ -67,7 +73,7 @@ func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error
 		}
 	}()
 	<-handler.ready // Wait till the consumer has been set up.
-	c.logger.Debug("sarama consumer ready")
+	c.logger.Debug("consumer group handler ready")
 
 	wg.Wait()
 	if errConsume != nil {

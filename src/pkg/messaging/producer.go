@@ -11,7 +11,7 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
-type UserTagProducer interface {
+type UserTagsProducer interface {
 	Send(tag types.UserTag) error
 }
 
@@ -37,13 +37,13 @@ func (p *Producer) Send(tag types.UserTag) error {
 		return fmt.Errorf("failed to marshal user tag: %w", err)
 	}
 	_, _, err = p.producer.SendMessage(&sarama.ProducerMessage{
-		Topic:     types.UserTagsTopic,
+		Topic:     UserTagsTopic,
 		Value:     sarama.ByteEncoder(tagJson),
 		Partition: 0,
 	})
 
 	logOpts := []zap.Field{
-		zap.String("topic", types.UserTagsTopic),
+		zap.String("topic", UserTagsTopic),
 		zap.ByteString("value", tagJson),
 		zap.Duration("duration", time.Since(start)),
 	}

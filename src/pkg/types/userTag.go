@@ -2,8 +2,6 @@ package types
 
 import "time"
 
-const UserTagsTopic string = "user-tags"
-
 type Device int8
 
 const (

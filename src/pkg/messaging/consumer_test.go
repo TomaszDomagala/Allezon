@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
-	"go.uber.org/zap"
 	"sync"
 	"time"
 )
@@ -17,8 +16,6 @@ func (s *MessagingSuite) TestNewConsumer() {
 }
 
 func (s *MessagingSuite) TestConsumer_Consume() {
-	//s.T().Skip() // TODO: fix this test
-
 	producer, err := NewProducer(s.logger, []string{hostPort})
 	s.Require().NoErrorf(err, "failed to create producer")
 
@@ -60,7 +57,6 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 		select {
 		case tag := <-recTags:
 			tags = append(tags, tag)
-			s.logger.Debug("received tag", zap.Any("tag", tag))
 		case <-time.After(timeout):
 			s.FailNow("timed out waiting for tags")
 		}

@@ -104,7 +104,7 @@ func (s *MessagingSuite) TestProducer_Send() {
 	s.Assert().NoErrorf(err, "failed to send message")
 
 	client, err := sarama.NewClient([]string{hostPort}, nil)
-	offset, err := client.GetOffset(types.UserTagsTopic, 0, sarama.OffsetNewest)
+	offset, err := client.GetOffset(UserTagsTopic, 0, sarama.OffsetNewest)
 	s.Require().NoErrorf(err, "failed to get offset")
 	s.Require().Equal(int64(1), offset)
 }

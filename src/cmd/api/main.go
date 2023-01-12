@@ -19,7 +19,7 @@ func main() {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
-	var producer messaging.UserTagProducer
+	var producer messaging.UserTagsProducer
 	if conf.KafkaNullProducer {
 		producer = messaging.NewNullProducer(logger)
 	} else {

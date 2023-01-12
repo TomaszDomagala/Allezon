@@ -11,7 +11,7 @@ type null struct {
 }
 
 // NewNullProducer returns a producer that does nothing but log invoked methods.
-func NewNullProducer(logger *zap.Logger) UserTagProducer {
+func NewNullProducer(logger *zap.Logger) UserTagsProducer {
 	return &null{logger: logger}
 }
 
