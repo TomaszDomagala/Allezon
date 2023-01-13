@@ -3,9 +3,10 @@ package messaging
 import (
 	"context"
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"sync"
 	"time"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 var timeout = time.Second * 20
@@ -28,7 +29,6 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 	for i := 0; i < 10; i++ {
 		sendTags = append(sendTags, types.UserTag{Cookie: fmt.Sprintf("cookie-%d", i)})
 	}
-
 	recTags := make(chan types.UserTag)
 
 	var wg sync.WaitGroup
