@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
-
 	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
@@ -41,57 +40,46 @@ func NewConsumer(logger *zap.Logger, addresses []string) (*Consumer, error) {
 // Consume consumes messages and pushes them to the tags channel. It blocks until the context is cancelled or an error occurs.
 // Should be run in a goroutine.
 func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error {
-	// Following conde is heavily inspired by sarama example https://github.com/Shopify/sarama/blob/main/examples/consumergroup/main.go.
+	// Following code is heavily inspired by sarama example https://github.com/Shopify/sarama/blob/main/examples/consumergroup/main.go.
 
 	handler := consumerGroupHandler{
 		logger: c.logger,
-		ready:  make(chan bool),
 		tags:   tags,
 	}
+	g := new(errgroup.Group)
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
-	var errConsume error
-	go func() {
-		defer wg.Done()
-
+	g.Go(func() error {
 		for {
 			// `Consume` should be called inside an infinite loop, when a
 			// server-side rebalance happens, the consumer session will need to be
 			// recreated to get the new claims
-			if errConsume = c.client.Consume(ctx, []string{UserTagsTopic}, &handler); errConsume != nil {
-				c.logger.Error("failed to consume messages", zap.Error(errConsume))
-				return
+			if err := c.client.Consume(ctx, []string{UserTagsTopic}, &handler); err != nil {
+				c.logger.Error("failed to consume messages", zap.Error(err))
+				return err
 			}
 			// check if context was cancelled, signaling that the consumer should stop
 			if ctx.Err() != nil {
 				c.logger.Debug("consumer context cancelled", zap.Error(ctx.Err()))
-				return
+				return nil
 			}
-			handler.ready = make(chan bool)
 		}
-	}()
-	<-handler.ready // Wait till the consumer has been set up.
-	c.logger.Debug("consumer group handler ready")
+	})
 
-	wg.Wait()
-	if errConsume != nil {
-		return fmt.Errorf("failed to consume messages: %w", errConsume)
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("failed to consume messages: %w", err)
 	}
 	return nil
 }
 
 type consumerGroupHandler struct {
 	logger *zap.Logger
-	ready  chan bool
 	tags   chan<- types.UserTag
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
 func (c *consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error {
 	// Mark the consumer as ready.
-	close(c.ready)
+	c.logger.Debug("consumer group handler ready")
 	return nil
 }
 
