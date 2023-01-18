@@ -1,3 +1,5 @@
 .vms
-cluster/credentials
 .idea
+
+cluster/credentials
+cluster/artifacts

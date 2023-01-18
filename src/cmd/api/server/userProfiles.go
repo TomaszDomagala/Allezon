@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -13,6 +14,7 @@ func (s server) userProfilesHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	s.logger.Debug("userProfilesHandler", zap.ByteString("req", req))
 
 	c.Data(http.StatusOK, "application/json", req)
 }
