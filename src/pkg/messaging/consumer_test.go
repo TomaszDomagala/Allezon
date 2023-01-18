@@ -31,7 +31,7 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 	}
 	recTags := make(chan types.UserTag)
 
-	g := new(errgroup.Group)
+	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		s.logger.Debug("sending tags")

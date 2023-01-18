@@ -46,7 +46,7 @@ func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error
 		logger: c.logger,
 		tags:   tags,
 	}
-	g := new(errgroup.Group)
+	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		for {
