@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
+	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -15,11 +16,19 @@ type Server interface {
 	Run() error
 }
 
+type Deps struct {
+	Logger   *zap.Logger
+	Cfg      *config.Config
+	Producer messaging.UserTagsProducer
+	DBGetter db.Getter
+}
+
 type server struct {
 	conf     *config.Config
 	logger   *zap.Logger
 	engine   *gin.Engine
 	producer messaging.UserTagsProducer
+	dbGetter db.Getter
 }
 
 func (s server) Run() error {
@@ -27,13 +36,13 @@ func (s server) Run() error {
 	return s.engine.Run(fmt.Sprintf(":%d", s.conf.Port))
 }
 
-func New(logger *zap.Logger, cfg *config.Config, producer messaging.UserTagsProducer) Server {
+func New(deps Deps) Server {
 	router := gin.New()
 
-	router.Use(ginzap.Ginzap(logger, time.RFC3339, true))
-	router.Use(ginzap.RecoveryWithZap(logger, true))
+	router.Use(ginzap.Ginzap(deps.Logger, time.RFC3339, true))
+	router.Use(ginzap.RecoveryWithZap(deps.Logger, true))
 
-	s := server{engine: router, producer: producer, logger: logger, conf: cfg}
+	s := server{engine: router, producer: deps.Producer, logger: deps.Logger, conf: deps.Cfg, dbGetter: deps.DBGetter}
 
 	router.GET("/health", s.health)
 

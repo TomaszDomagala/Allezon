@@ -10,6 +10,9 @@ type Config struct {
 	// Kafka options
 	KafkaNullProducer bool     `mapstructure:"kafka_null_producer"`
 	KafkaAddresses    []string `mapstructure:"kafka_addresses"`
+
+	// DB options
+	DBAddresses []string `mapstructure:"db_addresses"`
 }
 
 func field(name string, defaultValue any) {
@@ -23,6 +26,7 @@ func New() (*Config, error) {
 
 	field("kafka_null_producer", false)
 	field("kafka_addresses", []string{})
+	field("db_addresses", []string{})
 
 	var c Config
 	_ = viper.Unmarshal(&c)

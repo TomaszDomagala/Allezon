@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
@@ -29,10 +30,19 @@ func main() {
 		}
 	}
 
-	srv := server.New(logger, conf, producer)
+	getter, err := db.NewGetterFromAddresses(conf.DBAddresses)
+	if err != nil {
+		logger.Fatal("Error while creating database client", zap.Error(err))
+	}
+
+	srv := server.New(server.Deps{
+		Logger:   logger,
+		Cfg:      conf,
+		Producer: producer,
+		DBGetter: getter,
+	})
 
 	if err := srv.Run(); err != nil {
-		//log.Fatalf("Error while running a server, %s", err)
 		logger.Fatal("Error while running a server", zap.Error(err))
 	}
 }
