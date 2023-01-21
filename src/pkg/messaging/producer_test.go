@@ -38,22 +38,9 @@ var (
 			}
 			env.Logger.Info("redpanda started")
 
-			admin, err := sarama.NewClusterAdmin([]string{hostPort}, nil)
+			err = createTestTopic(env)
 			if err != nil {
-				return fmt.Errorf("failed to create client: %w", err)
-			}
-			defer func() {
-				err := admin.Close()
-				if err != nil {
-					env.Logger.Error("failed to close admin", zap.Error(err))
-				}
-			}()
-			err = admin.CreateTopic(UserTagsTopic, &sarama.TopicDetail{
-				NumPartitions:     testTopicPartitionsNumber,
-				ReplicationFactor: 1,
-			}, false)
-			if err != nil {
-				return fmt.Errorf("failed to create topic: %w", err)
+				return fmt.Errorf("failed to create test topic: %w", err)
 			}
 			return nil
 		},
@@ -78,6 +65,27 @@ func redpandaHearthCheck(env *container.Environment) error {
 		return fmt.Errorf("failed to get controller: %w", err)
 	}
 
+	return nil
+}
+
+func createTestTopic(env *container.Environment) error {
+	admin, err := sarama.NewClusterAdmin([]string{hostPort}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
+	defer func() {
+		err := admin.Close()
+		if err != nil {
+			env.Logger.Error("failed to close admin", zap.Error(err))
+		}
+	}()
+	err = admin.CreateTopic(UserTagsTopic, &sarama.TopicDetail{
+		NumPartitions:     testTopicPartitionsNumber,
+		ReplicationFactor: 1,
+	}, false)
+	if err != nil {
+		return fmt.Errorf("failed to create topic: %w", err)
+	}
 	return nil
 }
 
