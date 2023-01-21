@@ -1,10 +1,6 @@
 package db
 
-func (g getter) Aggregates() AggregatesGetter {
-	//TODO implement me
-	panic("implement me")
-}
-func (m modifier) Aggregates() AggregatesModifier {
+func (c client) Aggregates() AggregatesClient {
 	//TODO implement me
 	panic("implement me")
 }

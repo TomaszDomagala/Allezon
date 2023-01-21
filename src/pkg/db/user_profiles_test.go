@@ -106,18 +106,18 @@ func (s *DBSuite) TearDownTest() {
 }
 
 func (s *DBSuite) TestNewModifier() {
-	_, err := NewModifierFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create modifier")
+	_, err := NewClientFromAddresses([]string{hostPort})
+	s.Require().NoErrorf(err, "failed to create client")
 }
 
 func (s *DBSuite) TestNewGetter() {
-	_, err := NewGetterFromAddresses([]string{hostPort})
+	_, err := NewClientFromAddresses([]string{hostPort})
 	s.Require().NoErrorf(err, "failed to create getter")
 }
 
 func (s *DBSuite) TestModifier_UserProfiles() {
-	m, err := NewModifierFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create modifier")
+	m, err := NewClientFromAddresses([]string{hostPort})
+	s.Require().NoErrorf(err, "failed to create client")
 
 	up := m.UserProfiles()
 	const cookie = "foobar"

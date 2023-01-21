@@ -30,12 +30,12 @@ func main() {
 		}
 	}
 
-	getter, err := db.NewGetterFromAddresses(conf.DBAddresses)
+	getter, err := db.NewClientFromAddresses(conf.DBAddresses)
 	if err != nil {
 		logger.Fatal("Error while creating database client", zap.Error(err))
 	}
 
-	srv := server.New(server.Deps{
+	srv := server.New(server.Dependencies{
 		Logger:   logger,
 		Cfg:      conf,
 		Producer: producer,

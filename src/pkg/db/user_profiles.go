@@ -4,25 +4,26 @@ import (
 	"encoding/json"
 	"fmt"
 	as "github.com/aerospike/aerospike-client-go/v6"
+	"github.com/aerospike/aerospike-client-go/v6/types"
 )
 
 const userProfilesNamespace = "user_profiles"
 const userProfilesViewsBin = "views"
 const userProfilesBuysBin = "buys"
 
-type userProfilesGetter struct {
+type userProfileClient struct {
 	cl *as.Client
 }
 
-func (g userProfilesGetter) Get(cookie string) (res GetResult[UserProfile], err error) {
+func (u userProfileClient) Get(cookie string) (res GetResult[UserProfile], err error) {
 	// TODO Get in case of update may be optimized to only Get affected bin.
 	key, err := as.NewKey(userProfilesNamespace, "", cookie)
 	if err != nil {
 		return res, err
 	}
-	r, err := g.cl.Get(nil, key, userProfilesBuysBin, userProfilesViewsBin)
+	r, err := u.cl.Get(nil, key, userProfilesBuysBin, userProfilesViewsBin)
 	if err != nil {
-		return res, err
+		return res, fmt.Errorf("failed to get user profiles, %w", err)
 	}
 	if r == nil {
 		return res, fmt.Errorf("user profiles for cookie %s not found, %w", cookie, KeyNotFoundError)
@@ -49,19 +50,7 @@ func (g userProfilesGetter) Get(cookie string) (res GetResult[UserProfile], err 
 	return
 }
 
-func (g getter) UserProfiles() UserProfileGetter {
-	return userProfilesGetter{cl: g.cl}
-}
-
-type userProfileModifier struct {
-	cl *as.Client
-}
-
-func (u userProfileModifier) Get(cookie string) (GetResult[UserProfile], error) {
-	return userProfilesGetter{cl: u.cl}.Get(cookie)
-}
-
-func (u userProfileModifier) Update(cookie string, userProfile UserProfile, generation Generation) error {
+func (u userProfileClient) Update(cookie string, userProfile UserProfile, generation Generation) error {
 	// TODO Update may only update affected bin.
 	key, ae := as.NewKey(userProfilesNamespace, "", cookie)
 	if ae != nil {
@@ -73,17 +62,23 @@ func (u userProfileModifier) Update(cookie string, userProfile UserProfile, gene
 
 	views, err := json.Marshal(userProfile.Views)
 	if err != nil {
-		return fmt.Errorf("couldn't marshal views")
+		return fmt.Errorf("couldn't marshal views, %w", err)
 	}
 
 	buys, err := json.Marshal(userProfile.Buys)
 	if err != nil {
-		return fmt.Errorf("couldn't marshal buys")
+		return fmt.Errorf("couldn't marshal buys, %w", err)
 	}
 
-	return u.cl.Put(policy, key, as.BinMap{userProfilesBuysBin: buys, userProfilesViewsBin: views})
+	if putErr := u.cl.Put(policy, key, as.BinMap{userProfilesBuysBin: buys, userProfilesViewsBin: views}); putErr != nil {
+		if putErr.Matches(types.GENERATION_ERROR) {
+			return fmt.Errorf("%w while trying to update %s, %s", GenerationMismatch, cookie, putErr)
+		}
+		return fmt.Errorf("error while trying to update %s, %w", cookie, putErr)
+	}
+	return nil
 }
 
-func (m modifier) UserProfiles() UserProfileModifier {
-	return userProfileModifier{cl: m.cl}
+func (c client) UserProfiles() UserProfileClient {
+	return userProfileClient{cl: c.cl}
 }

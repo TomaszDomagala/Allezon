@@ -16,11 +16,11 @@ type Server interface {
 	Run() error
 }
 
-type Deps struct {
+type Dependencies struct {
 	Logger   *zap.Logger
 	Cfg      *config.Config
 	Producer messaging.UserTagsProducer
-	DBGetter db.Getter
+	DBGetter db.Client
 }
 
 type server struct {
@@ -28,7 +28,7 @@ type server struct {
 	logger   *zap.Logger
 	engine   *gin.Engine
 	producer messaging.UserTagsProducer
-	dbGetter db.Getter
+	dbGetter db.Client
 }
 
 func (s server) Run() error {
@@ -36,7 +36,7 @@ func (s server) Run() error {
 	return s.engine.Run(fmt.Sprintf(":%d", s.conf.Port))
 }
 
-func New(deps Deps) Server {
+func New(deps Dependencies) Server {
 	router := gin.New()
 
 	router.Use(ginzap.Ginzap(deps.Logger, time.RFC3339, true))
