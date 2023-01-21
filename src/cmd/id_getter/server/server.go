@@ -156,7 +156,7 @@ func New(deps Dependencies) Server {
 
 	router.GET("/health", s.health)
 
-	router.POST("/get_id", s.getId)
+	router.POST(api.GetIdUrl, s.getId)
 
 	return s
 }
