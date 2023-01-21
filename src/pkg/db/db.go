@@ -10,7 +10,7 @@ import (
 var KeyNotFoundError = fmt.Errorf("key not found")
 var GenerationMismatch = fmt.Errorf("generation mismatch")
 
-type Generation = int32
+type Generation = uint32
 
 type GetResult[T any] struct {
 	Generation Generation
@@ -19,6 +19,8 @@ type GetResult[T any] struct {
 
 type UserProfileModifier interface {
 	UserProfileGetter
+	Update(cookie string, userProfile UserProfile, generation Generation) error
+	Add(cookie string, userProfile UserProfile) error
 }
 
 type UserProfile struct {
@@ -28,8 +30,6 @@ type UserProfile struct {
 
 type UserProfileGetter interface {
 	Get(cookie string) (GetResult[UserProfile], error)
-	Update(cookie string, userProfile UserProfile, generation Generation) error
-	Add(cookie string, userProfile UserProfile) error
 }
 
 type ActionAggregates struct {
