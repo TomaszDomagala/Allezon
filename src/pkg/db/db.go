@@ -20,7 +20,6 @@ type GetResult[T any] struct {
 type UserProfileModifier interface {
 	UserProfileGetter
 	Update(cookie string, userProfile UserProfile, generation Generation) error
-	Add(cookie string, userProfile UserProfile) error
 }
 
 type UserProfile struct {
@@ -56,7 +55,6 @@ type AggregatesGetter interface {
 type AggregatesModifier interface {
 	AggregatesGetter
 	Update(minuteStart *time.Time, aggregates Aggregates, generation Generation) error
-	Add(minuteStart *time.Time, aggregates Aggregates) error
 }
 
 type Getter interface {

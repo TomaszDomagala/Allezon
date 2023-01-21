@@ -84,10 +84,6 @@ func (u userProfileModifier) Update(cookie string, userProfile UserProfile, gene
 	return u.cl.Put(policy, key, as.BinMap{userProfilesBuysBin: buys, userProfilesViewsBin: views})
 }
 
-func (u userProfileModifier) Add(cookie string, userProfile UserProfile) error {
-	return u.Update(cookie, userProfile, 0)
-}
-
 func (m modifier) UserProfiles() UserProfileModifier {
 	return userProfileModifier{cl: m.cl}
 }
