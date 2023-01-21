@@ -90,6 +90,7 @@ func (s *DBSuite) SetupSuite() {
 func (s *DBSuite) SetupTest() {
 	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService})
 	err := s.env.Run()
+	s.Assert().NoErrorf(err, "could not run environment")
 	if err != nil {
 		a, e := os.Getwd()
 		fmt.Println(a, e)
