@@ -4,6 +4,8 @@ package container
 
 import (
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
+	"math/rand"
 	"strings"
 
 	"github.com/ory/dockertest/v3"
@@ -23,18 +25,23 @@ type Service struct {
 type Environment struct {
 	Name     string
 	Logger   *zap.Logger
+	Config   *Config
 	services []*Service
 
 	Pool      *dockertest.Pool
 	resources []*dockertest.Resource
-	network   *dockertest.Network
+	//network   *dockertest.Network
 }
 
-func NewEnvironment(name string, logger *zap.Logger, services []*Service) *Environment {
+func NewEnvironment(name string, logger *zap.Logger, services []*Service, config *Config) *Environment {
+	if config == nil {
+		config = NewConfig()
+	}
 	return &Environment{
 		Name:     name,
 		Logger:   logger,
 		services: services,
+		Config:   config,
 	}
 }
 
@@ -55,24 +62,21 @@ func (s *Environment) Run() error {
 		return fmt.Errorf("could not ping pool: %w", err)
 	}
 
-	s.network, err = s.Pool.CreateNetwork(prefixTestName(s.Name, "network"))
+	//s.network, err = s.Pool.CreateNetwork(prefixTestName(s.Name, "network"))
 	if err != nil {
 		return fmt.Errorf("could not create network: %w", err)
 	}
 
 	for _, service := range s.services {
-		s.Logger.Info("starting container", zap.String("name", service.Name))
-
 		options := service.Options
-		options.Name = prefixTestName(s.Name, service.Name)
+		options.Name = s.dockerString(service.Name)
 
-		if err = s.Pool.RemoveContainerByName(options.Name); err != nil {
-			s.Logger.Error("could not remove container", zap.Error(err))
-		}
-		r, err := s.Pool.RunWithOptions(options)
+		r, err := s.startService(options)
 		if err != nil {
-			return fmt.Errorf("could not start container: %w", err)
+			return fmt.Errorf("could not start container %s: %w", options.Name, err)
 		}
+		s.resources = append(s.resources, r)
+
 		if service.AfterRun != nil {
 			err = service.AfterRun(s, r)
 			if err != nil {
@@ -80,11 +84,41 @@ func (s *Environment) Run() error {
 			}
 		}
 
-		s.resources = append(s.resources, r)
-		s.Logger.Info("started container", zap.String("container_id", r.Container.ID))
 	}
 
 	return nil
+}
+
+// startService tries to start a service using exponential backoff.
+func (s *Environment) startService(options *dockertest.RunOptions) (*dockertest.Resource, error) {
+	var resource *dockertest.Resource
+
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = s.Config.ServiceStartMaxTime
+	bo.MaxInterval = s.Config.ServiceStartMaxInterval
+
+	err := backoff.Retry(func() error {
+		var err error
+		resource, err = s.doStartService(options)
+		return err
+	}, bo)
+
+	if err != nil {
+		return nil, fmt.Errorf("could not start container %s: %w", options.Name, err)
+	}
+	return resource, nil
+}
+
+func (s *Environment) doStartService(options *dockertest.RunOptions) (*dockertest.Resource, error) {
+	if err := s.Pool.RemoveContainerByName(options.Name); err != nil {
+		s.Logger.Error("could not remove container", zap.Error(err), zap.String("name", options.Name))
+	}
+	resource, err := s.Pool.RunWithOptions(options)
+	if err != nil {
+		return nil, fmt.Errorf("could not start container %s: %w", options.Name, err)
+	}
+	s.Logger.Info("started container", zap.String("container_id", resource.Container.ID))
+	return resource, nil
 }
 
 func (s *Environment) Close() error {
@@ -93,18 +127,21 @@ func (s *Environment) Close() error {
 	s.Logger.Info("tearing down test", zap.String("test_name", s.Name))
 
 	for _, resource := range s.resources {
+		if resource == nil {
+			continue
+		}
 		s.Logger.Info("stopping container", zap.String("container_id", resource.Container.ID))
 		err := s.Pool.Purge(resource)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("could not stop container: %w", err))
+			errs = append(errs, fmt.Errorf("could not stop container %s: %w", resource.Container.Name, err))
 		}
 	}
-	if s.network != nil {
-		err := s.Pool.RemoveNetwork(s.network)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("could not remove network: %w", err))
-		}
-	}
+	//if s.network != nil {
+	//	err := s.Pool.RemoveNetwork(s.network)
+	//	if err != nil {
+	//		errs = append(errs, fmt.Errorf("could not remove network: %w", err))
+	//	}
+	//}
 
 	if len(errs) > 0 {
 		return fmt.Errorf("could not tear down environment: %v", errs)
@@ -112,8 +149,24 @@ func (s *Environment) Close() error {
 	return nil
 }
 
-// prefixTestName returns a name prefixed with the test name, in a docker friendly way.
-func prefixTestName(test, name string) string {
-	test = strings.Replace(test, "/", "-", -1)
-	return fmt.Sprintf("%s-%s", test, name)
+// dockerString returns a name prefixed with the test name, in a docker friendly way.
+// If ServiceNameRandomSuffix is set, a random suffix is added to the name.
+func (s *Environment) dockerString(name string) string {
+	test := strings.Replace(s.Name, "/", "-", -1)
+	var suffix string
+	if s.Config.ServiceNameRandomSuffix {
+		suffix = fmt.Sprintf("-%s", randString(s.Config.ServiceNameRandomSuffixLength))
+	}
+
+	return fmt.Sprintf("%s-%s%s", test, name, suffix)
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

@@ -73,8 +73,8 @@ type DBSuite struct {
 	env *container.Environment
 }
 
-// TestDBSuite is an entry point for running all tests in this package.
-func TestDBSuite(t *testing.T) {
+// TestIDGetterDBSuite is an entry point for running all tests in this package.
+func TestIDGetterDBSuite(t *testing.T) {
 	suite.Run(t, new(DBSuite))
 }
 
@@ -86,7 +86,7 @@ func (s *DBSuite) SetupSuite() {
 }
 
 func (s *DBSuite) SetupTest() {
-	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService})
+	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService}, nil)
 	err := s.env.Run()
 	if err != nil {
 		a, e := os.Getwd()

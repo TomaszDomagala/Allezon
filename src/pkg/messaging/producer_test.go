@@ -71,7 +71,7 @@ func (s *MessagingSuite) SetupSuite() {
 }
 
 func (s *MessagingSuite) SetupTest() {
-	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{redpandaService})
+	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{redpandaService}, nil)
 	err := s.env.Run()
 	if err != nil {
 		errClose := s.env.Close()
