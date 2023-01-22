@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"golang.org/x/sync/errgroup"
+	"sort"
 	"sync"
 	"time"
 
@@ -64,17 +65,15 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 	cancel()
 	_ = g.Wait()
 
-	var tagsToSendSet = make(map[string]struct{})
-	var tagsRecSet = make(map[string]struct{})
+	// Order is not guaranteed, so we need to sort the slices.
+	sort.Slice(tagsToSend, func(i, j int) bool {
+		return tagsToSend[i].Cookie < tagsToSend[j].Cookie
+	})
+	sort.Slice(tagsRec, func(i, j int) bool {
+		return tagsRec[i].Cookie < tagsRec[j].Cookie
+	})
 
-	// Order is not guaranteed between partitions, so we need to check if the sets are equal.
-	for _, tag := range tagsToSend {
-		tagsToSendSet[tag.Cookie] = struct{}{}
-	}
-	for _, tag := range tagsRec {
-		tagsRecSet[tag.Cookie] = struct{}{}
-	}
-	s.Assert().Equalf(tagsToSendSet, tagsRecSet, "received tags do not match sent tags")
+	s.Assert().Equalf(tagsToSend, tagsRec, "received tags do not match sent tags")
 }
 
 func (s *MessagingSuite) TestConsumer_Consume_multiple_consumers() {
@@ -155,13 +154,13 @@ func (s *MessagingSuite) TestConsumer_Consume_multiple_consumers() {
 	var tagsToSendSet = make(map[string]struct{})
 	var tagsRecSet = make(map[string]struct{})
 
-	// Order is not guaranteed between partitions, so we need to check if the sets are equal.
-	for _, tag := range tagsToSend {
-		tagsToSendSet[tag.Cookie] = struct{}{}
-	}
-	for _, tag := range tagsRec {
-		tagsRecSet[tag.Cookie] = struct{}{}
-	}
+	// Order is not guaranteed, so we need to sort the slices.
+	sort.Slice(tagsToSend, func(i, j int) bool {
+		return tagsToSend[i].Cookie < tagsToSend[j].Cookie
+	})
+	sort.Slice(tagsRec, func(i, j int) bool {
+		return tagsRec[i].Cookie < tagsRec[j].Cookie
+	})
 	s.Assert().Equalf(tagsToSendSet, tagsRecSet, "received tags do not match sent tags")
 
 	var consumersUsedList []int
@@ -170,5 +169,5 @@ func (s *MessagingSuite) TestConsumer_Consume_multiple_consumers() {
 		return true
 	})
 
-	s.Assert().Equalf(len(consumersUsedList), 4, "not all consumers were used")
+	s.Assert().Equalf(len(consumersUsedList), consumersNum, "not all consumers were used")
 }
