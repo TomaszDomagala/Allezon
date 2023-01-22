@@ -30,7 +30,6 @@ var (
 	aerospikeService = &container.Service{
 		Name: "aerospike",
 		Options: &dockertest.RunOptions{
-			//Name:       "aerospike",
 			Repository: "aerospike",
 			Tag:        "ce-6.2.0.2",
 			Hostname:   "aerospike",

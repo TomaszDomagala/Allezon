@@ -28,7 +28,6 @@ var (
 	aerospikeService = &container.Service{
 		Name: "aerospike",
 		Options: &dockertest.RunOptions{
-			//Name:       "aerospike",
 			Repository: "aerospike",
 			Tag:        "ce-6.2.0.2",
 			Hostname:   "aerospike",
@@ -74,8 +73,8 @@ type DBSuite struct {
 	env *container.Environment
 }
 
-// TestUserProfilesSuite is an entry point for running all tests in this package.
-func TestUserProfilesSuite(t *testing.T) {
+// TestDBSuite is an entry point for running all tests in this package.
+func TestDBSuite(t *testing.T) {
 	suite.Run(t, new(DBSuite))
 }
 
