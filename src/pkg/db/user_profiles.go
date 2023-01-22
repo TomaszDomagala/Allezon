@@ -59,6 +59,7 @@ func (u userProfileClient) Update(cookie string, userProfile UserProfile, genera
 
 	policy := as.NewWritePolicy(generation, as.TTLServerDefault)
 	policy.RecordExistsAction = as.UPDATE
+	policy.GenerationPolicy = as.EXPECT_GEN_EQUAL
 
 	views, err := json.Marshal(userProfile.Views)
 	if err != nil {
