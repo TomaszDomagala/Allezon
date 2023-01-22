@@ -31,18 +31,18 @@ func (u userProfileClient) Get(cookie string) (res GetResult[UserProfile], err e
 
 	if views, ok := r.Bins[userProfilesViewsBin].([]byte); ok {
 		if err = json.Unmarshal(views, &res.Result.Views); err != nil {
-			return res, fmt.Errorf("couldn't unmarshall views")
+			return res, fmt.Errorf("couldn't unmarshall views, %w", err)
 		}
 	} else {
-		return res, fmt.Errorf("views have wrong type: %T", views)
+		return res, fmt.Errorf("views have wrong type: %T", r.Bins[userProfilesViewsBin])
 	}
 
 	if buys, ok := r.Bins[userProfilesBuysBin].([]byte); ok {
 		if err = json.Unmarshal(buys, &res.Result.Buys); err != nil {
-			return res, fmt.Errorf("couldn't unmarshall buys")
+			return res, fmt.Errorf("couldn't unmarshall buys, %w", err)
 		}
 	} else {
-		return res, fmt.Errorf("buys have wrong type: %T", buys)
+		return res, fmt.Errorf("buys have wrong type: %T", r.Bins[userProfilesBuysBin])
 	}
 
 	res.Generation = r.Generation
@@ -57,8 +57,9 @@ func (u userProfileClient) Update(cookie string, userProfile UserProfile, genera
 		return ae
 	}
 
-	policy := as.NewWritePolicy(generation, 0)
+	policy := as.NewWritePolicy(generation, as.TTLServerDefault)
 	policy.RecordExistsAction = as.UPDATE
+	policy.GenerationPolicy = as.EXPECT_GEN_EQUAL
 
 	views, err := json.Marshal(userProfile.Views)
 	if err != nil {

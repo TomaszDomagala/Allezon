@@ -35,18 +35,18 @@ type ActionAggregates struct {
 }
 
 type TypeAggregates struct {
-	Views ActionAggregates
-	Buys  ActionAggregates
+	Sum   []ActionAggregates
+	Count []ActionAggregates
 }
 
 type Aggregates struct {
-	Count TypeAggregates
-	Sum   TypeAggregates
+	Views TypeAggregates
+	Buys  TypeAggregates
 }
 
 type AggregatesClient interface {
-	Get(minuteStart *time.Time) (GetResult[Aggregates], error)
-	Update(minuteStart *time.Time, aggregates Aggregates, generation Generation) error
+	Get(minuteStart time.Time) (GetResult[Aggregates], error)
+	Update(minuteStart time.Time, aggregates Aggregates, generation Generation) error
 }
 
 type Client interface {
