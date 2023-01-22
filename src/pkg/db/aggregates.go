@@ -122,6 +122,7 @@ func (a aggregatesClient) Update(minuteStart time.Time, aggregates Aggregates, g
 
 	policy := as.NewWritePolicy(generation, as.TTLServerDefault)
 	policy.RecordExistsAction = as.UPDATE
+	policy.GenerationPolicy = as.EXPECT_GEN_EQUAL
 
 	views, err := marshallTypeAggregates(aggregates.Views)
 	if err != nil {

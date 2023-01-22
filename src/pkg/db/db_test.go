@@ -116,7 +116,7 @@ func (s *DBSuite) TestNewGetter() {
 	s.Require().NoErrorf(err, "failed to create getter")
 }
 
-func (s *DBSuite) TestModifier_UserProfiles() {
+func (s *DBSuite) Test_UserProfiles() {
 	m, err := NewClientFromAddresses([]string{hostPort})
 	s.Require().NoErrorf(err, "failed to create client")
 
@@ -144,7 +144,25 @@ func (s *DBSuite) TestModifier_UserProfiles() {
 	s.Require().Equal(got.Generation+1, updated.Generation)
 }
 
-func (s *DBSuite) TestModifier_Aggregates() {
+func (s *DBSuite) Test_UserProfiles_Update_ErrorOnGenerationMismatch() {
+	m, err := NewClientFromAddresses([]string{hostPort})
+	s.Require().NoErrorf(err, "failed to create client")
+
+	up := m.UserProfiles()
+	const cookie = "foobar"
+	t := UserProfile{}
+
+	err = up.Update(cookie, t, 0)
+	s.Require().NoErrorf(err, "failed to create record")
+
+	err = up.Update(cookie, t, 0)
+	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
+
+	err = up.Update(cookie, t, 2)
+	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
+}
+
+func (s *DBSuite) Test_Aggregates() {
 	m, err := NewClientFromAddresses([]string{hostPort})
 	s.Require().NoErrorf(err, "failed to create client")
 
@@ -301,7 +319,6 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 		},
 	}
 	min := time.Now()
-	min = min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second())))
 
 	err = a.Update(min, t, 0)
 	s.Require().NoErrorf(err, "failed to create record")
@@ -317,4 +334,22 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 	got, err = a.Get(min.Add(time.Minute - time.Nanosecond))
 	s.Require().Equal(t, got.Result)
 	s.Require().Equal(uint32(1), got.Generation)
+}
+
+func (s *DBSuite) Test_Aggregates_Update_ErrorOnGenerationMismatch() {
+	m, err := NewClientFromAddresses([]string{hostPort})
+	s.Require().NoErrorf(err, "failed to create client")
+
+	a := m.Aggregates()
+	min := time.Now()
+	t := Aggregates{}
+
+	err = a.Update(min, t, 0)
+	s.Require().NoErrorf(err, "failed to create record")
+
+	err = a.Update(min, t, 0)
+	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
+
+	err = a.Update(min, t, 2)
+	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
 }
