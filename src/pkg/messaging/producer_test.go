@@ -142,4 +142,20 @@ func (s *MessagingSuite) TestProducer_Send() {
 
 	err = producer.Send(tag)
 	s.Assert().NoErrorf(err, "failed to send message")
+
+	client, err := sarama.NewClient([]string{hostPort}, nil)
+	s.Require().NoErrorf(err, "failed to create client")
+	partitions, err := client.Partitions(UserTagsTopic)
+	s.Require().NoErrorf(err, "failed to get partitions")
+
+	var foundWrittenPartition bool
+	for _, partition := range partitions {
+		offset, err := client.GetOffset(UserTagsTopic, partition, sarama.OffsetNewest)
+		s.Require().NoErrorf(err, "failed to get offset")
+		if offset != 0 {
+			foundWrittenPartition = true
+			break
+		}
+	}
+	s.Assert().Truef(foundWrittenPartition, "no partition has been written to")
 }
