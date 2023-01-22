@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+//go:generate protoc -I=./ --go_out=./ ./aggregates.proto
+
 const aggregatesNamespace = "aggregates"
 const aggregatesViewsBin = "views"
 const aggregatesBuysBin = "buys"
@@ -18,6 +20,7 @@ type aggregatesClient struct {
 }
 
 func timeToKey(t time.Time) string {
+	t = t.Add(-(time.Duration(t.Nanosecond()) + time.Second*time.Duration(t.Second())))
 	return fmt.Sprint(t.Unix())
 }
 
