@@ -319,6 +319,7 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 		},
 	}
 	min := time.Now()
+	min = min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second())))
 
 	err = a.Update(min, t, 0)
 	s.Require().NoErrorf(err, "failed to create record")
