@@ -232,3 +232,89 @@ func (s *DBSuite) TestModifier_Aggregates() {
 	s.Require().Equal(newT, updated.Result)
 	s.Require().Equal(got.Generation+1, updated.Generation)
 }
+
+func (s *DBSuite) Test_Aggregates_MinuteRounding() {
+	m, err := NewClientFromAddresses([]string{hostPort})
+	s.Require().NoErrorf(err, "failed to create client")
+
+	a := m.Aggregates()
+	t := Aggregates{
+		Views: TypeAggregates{
+			Sum: []ActionAggregates{
+				{
+					CategoryId: 1,
+					BrandId:    2,
+					Origin:     3,
+					Data:       4,
+				},
+				{
+					CategoryId: 5,
+					BrandId:    4,
+					Origin:     3,
+					Data:       2,
+				},
+			},
+			Count: []ActionAggregates{
+				{
+					CategoryId: 10,
+					BrandId:    20,
+					Origin:     30,
+					Data:       40,
+				},
+				{
+					CategoryId: 50,
+					BrandId:    40,
+					Origin:     30,
+					Data:       20,
+				},
+			},
+		},
+		Buys: TypeAggregates{
+			Sum: []ActionAggregates{
+				{
+					CategoryId: 11,
+					BrandId:    12,
+					Origin:     13,
+					Data:       14,
+				},
+				{
+					CategoryId: 25,
+					BrandId:    24,
+					Origin:     23,
+					Data:       22,
+				},
+			},
+			Count: []ActionAggregates{
+				{
+					CategoryId: 110,
+					BrandId:    120,
+					Origin:     130,
+					Data:       140,
+				},
+				{
+					CategoryId: 150,
+					BrandId:    140,
+					Origin:     130,
+					Data:       120,
+				},
+			},
+		},
+	}
+	min := time.Now()
+	min = min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second())))
+
+	err = a.Update(min, t, 0)
+	s.Require().NoErrorf(err, "failed to create record")
+
+	got, err := a.Get(min)
+	s.Require().Equal(t, got.Result)
+	s.Require().Equal(uint32(1), got.Generation)
+
+	got, err = a.Get(min.Add(30 * time.Second))
+	s.Require().Equal(t, got.Result)
+	s.Require().Equal(uint32(1), got.Generation)
+
+	got, err = a.Get(min.Add(time.Minute - time.Nanosecond))
+	s.Require().Equal(t, got.Result)
+	s.Require().Equal(uint32(1), got.Generation)
+}

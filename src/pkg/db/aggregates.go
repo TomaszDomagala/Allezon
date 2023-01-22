@@ -20,8 +20,7 @@ type aggregatesClient struct {
 }
 
 func timeToKey(t time.Time) string {
-	t = t.Add(-(time.Duration(t.Nanosecond()) + time.Second*time.Duration(t.Second())))
-	return fmt.Sprint(t.Unix())
+	return t.Format(time.RFC822)
 }
 
 func (a *ActionAggregates) decode(v *pb.ActionAggregate) {
