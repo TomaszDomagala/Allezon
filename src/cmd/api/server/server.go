@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
+	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -20,7 +21,8 @@ type Dependencies struct {
 	Logger   *zap.Logger
 	Cfg      *config.Config
 	Producer messaging.UserTagsProducer
-	DBGetter db.Client
+	DB       db.Client
+	IDGetter idGetter.Client
 }
 
 type server struct {
@@ -28,7 +30,8 @@ type server struct {
 	logger   *zap.Logger
 	engine   *gin.Engine
 	producer messaging.UserTagsProducer
-	dbGetter db.Client
+	db       db.Client
+	idGetter idGetter.Client
 }
 
 func (s server) Run() error {
@@ -42,7 +45,14 @@ func New(deps Dependencies) Server {
 	router.Use(ginzap.Ginzap(deps.Logger, time.RFC3339, true))
 	router.Use(ginzap.RecoveryWithZap(deps.Logger, true))
 
-	s := server{engine: router, producer: deps.Producer, logger: deps.Logger, conf: deps.Cfg, dbGetter: deps.DBGetter}
+	s := server{
+		engine:   router,
+		producer: deps.Producer,
+		logger:   deps.Logger,
+		conf:     deps.Cfg,
+		db:       deps.DB,
+		idGetter: deps.IDGetter,
+	}
 
 	router.GET("/health", s.health)
 
