@@ -88,7 +88,7 @@ func (s *DBSuite) SetupSuite() {
 }
 
 func (s *DBSuite) SetupTest() {
-	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService})
+	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService}, nil)
 	err := s.env.Run()
 	if err != nil {
 		a, e := os.Getwd()
