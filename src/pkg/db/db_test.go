@@ -30,7 +30,6 @@ var (
 	aerospikeService = &container.Service{
 		Name: "aerospike",
 		Options: &dockertest.RunOptions{
-			//Name:       "aerospike",
 			Repository: "aerospike",
 			Tag:        "ce-6.2.0.2",
 			Hostname:   "aerospike",
@@ -89,7 +88,7 @@ func (s *DBSuite) SetupSuite() {
 }
 
 func (s *DBSuite) SetupTest() {
-	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService})
+	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService}, nil)
 	err := s.env.Run()
 	if err != nil {
 		a, e := os.Getwd()
