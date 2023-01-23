@@ -13,6 +13,8 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 )
 
+const testTopicPartitionsNumber = 4
+
 var (
 	// hostPort is a host:port string that is used to connect to the service.
 	hostPort = "localhost:9092"
@@ -25,29 +27,67 @@ var (
 			Hostname:     "redpanda",
 			PortBindings: map[docker.Port][]docker.PortBinding{"9092/tcp": {{HostIP: "localhost", HostPort: "9092"}}},
 		},
-		AfterRun: func(env *container.Environment, resource *dockertest.Resource) error {
+		AfterRun: func(env *container.Environment, _ *dockertest.Resource) error {
 			// Wait for the service to be ready.
 			env.Logger.Info("waiting for redpanda to start")
 			err := env.Pool.Retry(func() error {
-				env.Logger.Debug("checking if redpanda is ready")
-				client, err := sarama.NewClient([]string{hostPort}, nil)
-				if err != nil {
-					return fmt.Errorf("failed to create client: %w", err)
-				}
-				_, err = client.Controller()
-				if err != nil {
-					return fmt.Errorf("failed to get controller: %w", err)
-				}
-				return nil
+				return redpandaHearthCheck(env)
 			})
 			if err != nil {
 				return fmt.Errorf("failed to wait for redpanda: %w", err)
 			}
 			env.Logger.Info("redpanda started")
+
+			err = createTestTopic(env)
+			if err != nil {
+				return fmt.Errorf("failed to create test topic: %w", err)
+			}
 			return nil
 		},
 	}
 )
+
+// redpandaHearthCheck checks if redpanda is ready to accept connections.
+func redpandaHearthCheck(env *container.Environment) error {
+	env.Logger.Debug("checking if redpanda is ready")
+	client, err := sarama.NewClient([]string{hostPort}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			env.Logger.Error("failed to close client", zap.Error(err))
+		}
+	}()
+	_, err = client.Controller()
+	if err != nil {
+		return fmt.Errorf("failed to get controller: %w", err)
+	}
+
+	return nil
+}
+
+func createTestTopic(env *container.Environment) error {
+	admin, err := sarama.NewClusterAdmin([]string{hostPort}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
+	defer func() {
+		err := admin.Close()
+		if err != nil {
+			env.Logger.Error("failed to close admin", zap.Error(err))
+		}
+	}()
+	err = admin.CreateTopic(UserTagsTopic, &sarama.TopicDetail{
+		NumPartitions:     testTopicPartitionsNumber,
+		ReplicationFactor: 1,
+	}, false)
+	if err != nil {
+		return fmt.Errorf("failed to create topic: %w", err)
+	}
+	return nil
+}
 
 // MessagingSuite is a suite for messaging integration tests.
 type MessagingSuite struct {
@@ -104,7 +144,18 @@ func (s *MessagingSuite) TestProducer_Send() {
 	s.Assert().NoErrorf(err, "failed to send message")
 
 	client, err := sarama.NewClient([]string{hostPort}, nil)
-	offset, err := client.GetOffset(UserTagsTopic, 0, sarama.OffsetNewest)
-	s.Require().NoErrorf(err, "failed to get offset")
-	s.Require().Equal(int64(1), offset)
+	s.Require().NoErrorf(err, "failed to create client")
+	partitions, err := client.Partitions(UserTagsTopic)
+	s.Require().NoErrorf(err, "failed to get partitions")
+
+	var foundWrittenPartition bool
+	for _, partition := range partitions {
+		offset, err := client.GetOffset(UserTagsTopic, partition, sarama.OffsetNewest)
+		s.Require().NoErrorf(err, "failed to get offset")
+		if offset != 0 {
+			foundWrittenPartition = true
+			break
+		}
+	}
+	s.Assert().Truef(foundWrittenPartition, "no partition has been written to")
 }

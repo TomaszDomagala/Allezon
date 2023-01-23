@@ -36,7 +36,7 @@ func (p *Producer) Send(tag types.UserTag) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal user tag: %w", err)
 	}
-	_, _, err = p.producer.SendMessage(&sarama.ProducerMessage{
+	partition, offset, err := p.producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     UserTagsTopic,
 		Value:     sarama.ByteEncoder(tagJson),
 		Partition: 0,
@@ -51,6 +51,6 @@ func (p *Producer) Send(tag types.UserTag) error {
 		p.logger.Error("failed to send kafka message", append(logOpts, zap.Error(err))...)
 		return fmt.Errorf("failed to send kafka message: %w", err)
 	}
-	p.logger.Debug("kafka message sent", logOpts...)
+	p.logger.Debug("kafka message sent", append(logOpts, zap.Int32("partition", partition), zap.Int64("offset", offset))...)
 	return nil
 }

@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
+	"go.uber.org/zap"
 )
 
 const (
@@ -46,29 +44,21 @@ func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error
 		logger: c.logger,
 		tags:   tags,
 	}
-	g, ctx := errgroup.WithContext(ctx)
 
-	g.Go(func() error {
-		for {
-			// `Consume` should be called inside an infinite loop, when a
-			// server-side rebalance happens, the consumer session will need to be
-			// recreated to get the new claims
-			if err := c.client.Consume(ctx, []string{UserTagsTopic}, &handler); err != nil {
-				c.logger.Error("failed to consume messages", zap.Error(err))
-				return err
-			}
-			// check if context was cancelled, signaling that the consumer should stop
-			if ctx.Err() != nil {
-				c.logger.Debug("consumer context cancelled", zap.Error(ctx.Err()))
-				return nil
-			}
+	for {
+		// `Consume` should be called inside an infinite loop, when a
+		// server-side rebalance happens, the consumer session will need to be
+		// recreated to get the new claims
+		if err := c.client.Consume(ctx, []string{UserTagsTopic}, &handler); err != nil {
+			c.logger.Error("failed to consume messages", zap.Error(err))
+			return fmt.Errorf("failed to consume messages: %w", err)
 		}
-	})
-
-	if err := g.Wait(); err != nil {
-		return fmt.Errorf("failed to consume messages: %w", err)
+		// check if context was cancelled, signaling that the consumer should stop
+		if ctx.Err() != nil {
+			c.logger.Debug("consumer context cancelled", zap.Error(ctx.Err()))
+			return nil
+		}
 	}
-	return nil
 }
 
 type consumerGroupHandler struct {
