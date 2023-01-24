@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"sync"
+	"time"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/server"
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/worker"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
+	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/config"
@@ -33,6 +36,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Error while creating database client", zap.Error(err))
 	}
+	getter := idGetter.NewClient(&http.Client{Timeout: time.Second}, conf.IDGetterAddress)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -44,6 +48,7 @@ func main() {
 			Logger:   logger,
 			Consumer: consumer,
 			DB:       client,
+			IDGetter: getter,
 		})
 
 		if err := wrk.Run(context.Background()); err != nil {

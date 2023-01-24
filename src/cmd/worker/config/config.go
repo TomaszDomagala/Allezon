@@ -11,6 +11,9 @@ type Config struct {
 
 	// DB options
 	DBAddresses []string `mapstructure:"db_addresses"`
+
+	// ID Getter
+	IDGetterAddress string `mapstructure:"id_getter_address"`
 }
 
 func field(name string, defaultValue any) {
