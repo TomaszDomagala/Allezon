@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
+	"sync"
+
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/server"
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/worker"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"go.uber.org/zap"
-	"sync"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/config"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
@@ -44,7 +46,7 @@ func main() {
 			DB:       client,
 		})
 
-		if err := wrk.Run(); err != nil {
+		if err := wrk.Run(context.Background()); err != nil {
 			logger.Fatal("Error while running a worker", zap.Error(err))
 		}
 	}()
