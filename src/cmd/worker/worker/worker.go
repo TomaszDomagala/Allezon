@@ -50,10 +50,7 @@ func (w worker) Run(ctx context.Context) error {
 		}
 		go ap.run(aggregatesChan)
 
-		upp := userProfilesProcessor{
-			db:     w.db,
-			logger: w.logger,
-		}
+		upp := newUserProfilesProcessor(w.db.UserProfiles(), w.logger)
 		go upp.run(userTagsChan)
 	}
 
