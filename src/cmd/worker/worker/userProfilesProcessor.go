@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
-	"github.com/cenkalti/backoff/v4"
 	"go.uber.org/zap"
 )
 
@@ -16,57 +14,19 @@ const maxLen = 200
 
 type userProfilesProcessor struct {
 	userProfiles db.UserProfileClient
-	logger       *zap.Logger
-	config       userProfilesProcessorCfg
-}
-
-type userProfilesProcessorCfg struct {
-	backoff backoff.ExponentialBackOff
+	base         baseProcessor
 }
 
 func newUserProfilesProcessor(userProfiles db.UserProfileClient, logger *zap.Logger) userProfilesProcessor {
-	return userProfilesProcessor{
+	u := userProfilesProcessor{
 		userProfiles: userProfiles,
-		logger:       logger,
-		config: userProfilesProcessorCfg{
-			backoff: backoff.ExponentialBackOff{
-				InitialInterval:     10 * time.Millisecond,
-				RandomizationFactor: backoff.DefaultRandomizationFactor,
-				Multiplier:          backoff.DefaultMultiplier,
-				MaxInterval:         500 * time.Second,
-				MaxElapsedTime:      10 * time.Second,
-				Stop:                backoff.Stop,
-				Clock:               backoff.SystemClock,
-			}},
 	}
+	u.base = newBaseProcessor(u.processTagOnce, logger)
+	return u
 }
 
 func (p userProfilesProcessor) run(tagsChan <-chan types.UserTag) {
-	for tag := range tagsChan {
-		if err := p.processTag(tag); err != nil {
-			p.logger.Error("error processing user tag", zap.Error(err))
-		}
-	}
-}
-
-func (p userProfilesProcessor) processTag(tag types.UserTag) error {
-	bo := p.config.backoff
-	bo.Reset()
-
-	err := backoff.Retry(func() error {
-		err := p.processTagOnce(tag)
-		if err != nil {
-			p.logger.Error("error processing user tag", zap.Error(err))
-			if !errors.Is(err, db.GenerationMismatch) {
-				return fmt.Errorf("error while processing user tag with cookie %s, %w", tag.Cookie, err)
-			}
-		}
-		return nil
-	}, &bo)
-	if err != nil {
-		return fmt.Errorf("error while processing with backoff user tag with cookie %s, %w", tag.Cookie, err)
-	}
-	return nil
+	p.base.run(tagsChan)
 }
 
 func (p userProfilesProcessor) processTagOnce(tag types.UserTag) error {
