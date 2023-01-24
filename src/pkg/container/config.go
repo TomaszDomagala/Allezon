@@ -17,9 +17,9 @@ type Config struct {
 // NewConfig returns a new Config with sane defaults.
 func NewConfig() *Config {
 	return &Config{
-		ServiceStartMaxTime:     30 * time.Second,
+		ServiceStartMaxTime:     80 * time.Second,
 		ServiceStartMaxInterval: 1 * time.Second,
-		
+
 		ServiceNameRandomSuffix:       true,
 		ServiceNameRandomSuffixLength: 8,
 	}
