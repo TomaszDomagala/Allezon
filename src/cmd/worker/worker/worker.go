@@ -39,7 +39,11 @@ func (w worker) Run(ctx context.Context) error {
 	defer close(tagsChan)
 
 	for i := 0; i < numProcessors; i++ {
-		p := processor{logger: w.logger}
+		p := processor{
+			db:       w.db,
+			logger:   w.logger,
+			idGetter: w.idGetter,
+		}
 		go p.Run(tagsChan)
 	}
 
@@ -63,7 +67,9 @@ func (p processor) processTag(tag types.UserTag) error {
 }
 
 type processor struct {
-	logger *zap.Logger
+	db       db.Client
+	logger   *zap.Logger
+	idGetter idGetter.Client
 }
 
 func New(deps Dependencies) Worker {
