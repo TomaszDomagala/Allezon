@@ -36,40 +36,38 @@ var numProcessors = runtime.NumCPU()
 
 func (w worker) Run(ctx context.Context) error {
 	tagsChan := make(chan types.UserTag, chanSize)
+	userTagsChan := make(chan types.UserTag, chanSize)
+	aggregatesChan := make(chan types.UserTag, chanSize)
 	defer close(tagsChan)
+	defer close(userTagsChan)
+	defer close(aggregatesChan)
 
 	for i := 0; i < numProcessors; i++ {
-		p := processor{
+		ap := aggregatesProcessor{
 			db:       w.db,
 			logger:   w.logger,
 			idGetter: w.idGetter,
 		}
-		go p.Run(tagsChan)
+		go ap.run(aggregatesChan)
+
+		upp := userProfilesProcessor{
+			db:     w.db,
+			logger: w.logger,
+		}
+		go upp.run(userTagsChan)
 	}
+
+	go func() {
+		for tag := range tagsChan {
+			userTagsChan <- tag
+			aggregatesChan <- tag
+		}
+	}()
 
 	if err := w.consumer.Consume(ctx, tagsChan); err != nil {
 		return fmt.Errorf("error consuming messages, %w", err)
 	}
 	return nil
-}
-
-func (p processor) Run(tagsChan <-chan types.UserTag) {
-	for tag := range tagsChan {
-		if err := p.processTag(tag); err != nil {
-			p.logger.Error("error processing user tag", zap.Error(err))
-		}
-	}
-}
-
-func (p processor) processTag(tag types.UserTag) error {
-	// TODO implement me
-	panic("not implemented")
-}
-
-type processor struct {
-	db       db.Client
-	logger   *zap.Logger
-	idGetter idGetter.Client
 }
 
 func New(deps Dependencies) Worker {
