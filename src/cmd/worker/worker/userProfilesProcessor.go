@@ -3,7 +3,6 @@ package worker
 import (
 	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
@@ -44,10 +43,18 @@ func (p userProfilesProcessor) processTagOnce(tag types.UserTag) error {
 	default:
 		return fmt.Errorf("unknown action, %d", tag.Action)
 	}
-	newArr := append(*arrPtr, tag)
-	sort.Slice(newArr, func(i, j int) bool { return newArr[i].Time.Before(newArr[j].Time) })
+	var newArr []types.UserTag
+	for i, t := range *arrPtr {
+		if t.Time.Before(tag.Time) {
+			newArr = append((*arrPtr)[:i], tag)
+			newArr = append(newArr, (*arrPtr)[i:]...)
+		}
+	}
+	if newArr == nil {
+		newArr = append(*arrPtr, tag)
+	}
 	if len(newArr) > maxLen {
-		newArr = newArr[len(newArr)-maxLen:]
+		newArr = newArr[:maxLen]
 	}
 	*arrPtr = newArr
 
