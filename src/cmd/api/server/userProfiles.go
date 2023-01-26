@@ -72,31 +72,17 @@ func (s server) userProfilesHandler(c *gin.Context) {
 }
 
 func convertTags(tags []types.UserTag, from, to time.Time, limit int) []UserTagsJson {
-	start := 0
-	end := len(tags)
 	toMilli := to.UnixMilli()
+	fromMilli := from.UnixMilli()
+	// Tags we get from DB are sorted in ascending order.
+	var selected []UserTagsJson
 	for _, tag := range tags {
-		if tag.Time.Before(from) {
-			start++
-		} else if tag.Time.UnixMilli() >= toMilli {
-			break
+		milli := tag.Time.UnixMilli()
+		if fromMilli <= milli && milli < toMilli {
+			selected = append(selected, convertToJsonTag(tag))
 		}
-		end++
 	}
-	if end-start > limit {
-		end = start + limit
-	}
-	tags = tags[start:end]
-
-	return convertToJsonTags(tags)
-}
-
-func convertToJsonTags(tags []types.UserTag) []UserTagsJson {
-	res := make([]UserTagsJson, len(tags))
-	for i, tag := range tags {
-		res[i] = convertToJsonTag(tag)
-	}
-	return res
+	return selected
 }
 
 func convertToJsonTag(tag types.UserTag) UserTagsJson {
