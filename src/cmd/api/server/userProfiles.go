@@ -20,7 +20,7 @@ type userProfilesResponse struct {
 	Buys   []UserTagsJson `json:"buys"`
 }
 
-const timeRangeMilliPrecisionLayout = "2022-03-22T12:15:00.000"
+const timeRangeMilliPrecisionLayout = "2006-01-02T15:04:05.999"
 
 func parseTimeRange(layout, str string) (time.Time, time.Time, error) {
 	split := strings.Split(str, "_")

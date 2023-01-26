@@ -56,7 +56,7 @@ func toAction(s string) (types.Action, error) {
 	}
 }
 
-const userTagTimeLayout = "2022-03-22T12:15:00.000Z"
+const userTagTimeLayout = "2006-01-02T15:04:05.999Z"
 
 func (r *UserTagsRequest) ToUserTag() (types.UserTag, error) {
 	t, err := time.Parse(userTagTimeLayout, r.Time)
