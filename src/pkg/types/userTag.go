@@ -10,12 +10,36 @@ const (
 	Tv
 )
 
+func (d Device) String() string {
+	switch d {
+	case Pc:
+		return "PC"
+	case Mobile:
+		return "MOBILE"
+	case Tv:
+		return "TV"
+	default:
+		return "Unknown"
+	}
+}
+
 type Action int8
 
 const (
 	View Action = iota
 	Buy
 )
+
+func (a Action) String() string {
+	switch a {
+	case View:
+		return "VIEW"
+	case Buy:
+		return "BUY"
+	default:
+		return "Unknown"
+	}
+}
 
 type ProductInfo struct {
 	ProductId  int    `json:"product_id"`
