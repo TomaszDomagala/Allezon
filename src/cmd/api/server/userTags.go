@@ -3,23 +3,17 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
-type ProductInfo struct {
-	ProductId  int    `json:"product_id"`
-	BrandId    string `json:"brand_id"`
-	CategoryId string `json:"category_id"`
-	Price      int32  `json:"price"`
-}
-
-type UserTagsRequest struct {
+type UserTagsJson struct {
 	Time        string      `json:"time"`
 	Cookie      string      `json:"cookie"`
 	Country     string      `json:"country"`
@@ -28,6 +22,15 @@ type UserTagsRequest struct {
 	Origin      string      `json:"origin"`
 	ProductInfo ProductInfo `json:"product_info"`
 }
+
+type ProductInfo struct {
+	ProductId  int    `json:"product_id"`
+	BrandId    string `json:"brand_id"`
+	CategoryId string `json:"category_id"`
+	Price      int32  `json:"price"`
+}
+
+type UserTagsRequest = UserTagsJson
 
 func toDevice(s string) (types.Device, error) {
 	switch s {
@@ -53,12 +56,10 @@ func toAction(s string) (types.Action, error) {
 	}
 }
 
-func toTime(s string) (time.Time, error) {
-	return time.Parse(time.RFC3339, s)
-}
+const userTagTimeLayout = "2006-01-02T15:04:05.999Z"
 
 func (r *UserTagsRequest) ToUserTag() (types.UserTag, error) {
-	t, err := toTime(r.Time)
+	t, err := time.Parse(userTagTimeLayout, r.Time)
 	if err != nil {
 		return types.UserTag{}, err
 	}
