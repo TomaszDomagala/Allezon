@@ -45,7 +45,7 @@ type ProductInfo struct {
 	ProductId  int    `json:"product_id"`
 	BrandId    string `json:"brand_id"`
 	CategoryId string `json:"category_id"`
-	Price      int32  `json:"price"`
+	Price      uint32 `json:"price"`
 }
 
 type UserTag struct {
