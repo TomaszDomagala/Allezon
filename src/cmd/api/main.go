@@ -25,26 +25,42 @@ func main() {
 
 	var producer messaging.UserTagsProducer
 	if conf.KafkaNullProducer {
+		logger.Info("Using null producer")
 		producer = messaging.NewNullProducer(logger)
 	} else {
+		logger.Info("Using kafka producer")
 		producer, err = messaging.NewProducer(logger, conf.KafkaAddresses)
 		if err != nil {
 			logger.Fatal("Error while creating producer", zap.Error(err))
 		}
 	}
 
-	client, err := db.NewClientFromAddresses(conf.DBAddresses)
-	if err != nil {
-		logger.Fatal("Error while creating database client", zap.Error(err))
+	var dbClient db.Client
+	if conf.DBNullClient {
+		logger.Info("Using null database client")
+		dbClient = db.NewNullClient(logger)
+	} else {
+		logger.Info("Using aerospike database client")
+		dbClient, err = db.NewClientFromAddresses(conf.DBAddresses)
+		if err != nil {
+			logger.Fatal("Error while creating database client", zap.Error(err))
+		}
 	}
 
-	getter := idGetter.NewClient(&http.Client{Timeout: time.Second}, conf.IDGetterAddress)
+	var getter idGetter.Client
+	if conf.IDGetterNullClient {
+		logger.Info("Using null id getter client")
+		getter = idGetter.NewNullClient(logger)
+	} else {
+		logger.Info("Using id getter client")
+		getter = idGetter.NewClient(&http.Client{Timeout: time.Second}, conf.IDGetterAddress)
+	}
 
 	srv := server.New(server.Dependencies{
 		Logger:   logger,
 		Cfg:      conf,
 		Producer: producer,
-		DB:       client,
+		DB:       dbClient,
 		IDGetter: getter,
 	})
 

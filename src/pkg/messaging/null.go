@@ -16,6 +16,6 @@ func NewNullProducer(logger *zap.Logger) UserTagsProducer {
 }
 
 func (n *null) Send(tag types.UserTag) error {
-	n.logger.Debug("null producer invoked", zap.Any("tag", tag))
+	n.logger.Debug("null producer invoked", zap.String("method", "Send"), zap.Any("tag", tag))
 	return nil
 }
