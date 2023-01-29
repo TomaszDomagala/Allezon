@@ -1,0 +1,9 @@
+apiVersion: v2
+name: foo
+description: "A Helm chart for testing ingress-nginx configured for kind. Read: https://kind.sigs.k8s.io/docs/user/ingress/"
+
+type: application
+
+version: 0.1.0
+
+appVersion: "1.16.0"

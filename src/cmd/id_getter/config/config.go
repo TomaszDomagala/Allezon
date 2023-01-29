@@ -8,7 +8,8 @@ type Config struct {
 	EchoMode bool `mapstructure:"echo_mode"`
 
 	// DB options
-	DBAddresses []string `mapstructure:"db_addresses"`
+	DBNullClient bool     `mapstructure:"db_null_client"`
+	DBAddresses  []string `mapstructure:"db_addresses"`
 }
 
 func field(name string, defaultValue any) {
@@ -20,6 +21,7 @@ func New() (*Config, error) {
 	field("port", 8080)
 	field("echo_mode", false)
 
+	field("db_null_client", false)
 	field("db_addresses", []string{})
 
 	var c Config

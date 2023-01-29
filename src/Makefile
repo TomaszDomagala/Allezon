@@ -4,14 +4,14 @@ GIT_DIR := $(shell git rev-parse --show-toplevel)
 WORK_DIR ?= $(GIT_DIR)
 SRC_DIR ?= $(WORK_DIR)/src
 DOCKER_DIR ?= $(WORK_DIR)/dockerfiles
-HELM_DIR ?= $(WORK_DIR)/helm
+CHARTS_DIR ?= $(WORK_DIR)/charts
 
 # kind config.
 KIND_SETUP_FILE ?= "kind.setup.yaml"
 KIND_CLUSTER_NAME ?= "allezon-cluster"
 
 # Helm config.
-HELM_CHARTS ?= api allezon
+HELM_CHARTS ?= api allezon foo
 HELM_RELEASE_NAME ?= allezon
 
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
@@ -83,11 +83,11 @@ kind-load-worker: ## Load the Worker docker image into kind.
 
 .PHONY: helm-dependency-update
 helm-dependency-update: ## Update all helm dependencies.
-	$(foreach chart,$(HELM_CHARTS),helm dependency update $(HELM_DIR)/$(chart);)
+	$(foreach chart,$(HELM_CHARTS),helm dependency update $(CHARTS_DIR)/$(chart);)
 
 .PHONY: helm-install
 helm-install: ## Install allezon helm chart.
-	helm install $(HELM_RELEASE_NAME) $(HELM_DIR)/allezon
+	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall allezon helm chart.
@@ -95,16 +95,20 @@ helm-uninstall: ## Uninstall allezon helm chart.
 
 .PHONY: helm-upgrade
 helm-upgrade: ## Upgrade allezon helm chart.
-	helm upgrade $(HELM_RELEASE_NAME) $(HELM_DIR)/allezon
+	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
 
-# Local deployment targets.
+# Local deployment targets. This is probably the most useful section of this Makefile.
+# Use local-deploy to deploy allezon locally.
+# For configuration changes, use local-deploy-update-helm to update the helm charts.
 
 .PHONY: local-deploy
 local-deploy: docker-build kind-delete-cluster kind-create-cluster kind-load helm-dependency-update helm-install ## Deploy allezon locally. Will delete the kind cluster if it already exists.
 
 .PHONY: local-deploy-update
-local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade ## Update the local deployment. This will not delete the kind cluster.
+local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade ## Build and load docker images into kind and update helm charts on already running kind cluster.
 
+.PHONY: local-deploy-update-helm
+local-deploy-update-helm: helm-dependency-update helm-upgrade ## Update and install helm charts on already running kind cluster.
 
 # Misc targets.
 

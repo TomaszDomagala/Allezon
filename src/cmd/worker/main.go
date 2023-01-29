@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
+	logger.Info("Config loaded", zap.Any("config", conf))
 
 	consumer, err := messaging.NewConsumer(logger, conf.KafkaAddresses)
 	if err != nil {

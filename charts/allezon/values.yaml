@@ -1,0 +1,44 @@
+api:
+  env:
+    # Kafka configuration
+    - name: KAFKA_NULL_PRODUCER
+      value: "false"
+    - name: KAFKA_ADDRESSES
+      value: "allezon-redpanda-0.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-1.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-2.allezon-redpanda.default.svc.cluster.local:9093"
+    - name: KAFKA_NUM_PARTITIONS
+      value: "3"
+    - name: KAFKA_REPLICATION_FACTOR
+      value: "1"
+    # Database configuration
+    - name: DB_NULL_CLIENT
+      value: "false"
+    - name: DB_ADDRESSES
+      value: "allezon-aerospike.default.svc.cluster.local:3000"
+    # ID Getter configuration
+    - name: ID_GETTER_NULL_CLIENT
+      value: "false"
+    - name: ID_GETTER_ADDRESS
+      value: "allezon-idgetter.default.svc.cluster.local:8080"
+
+worker:
+  env:
+    - name: PORT
+      value: "8080"
+    - name: KAFKA_ADDRESSES
+      value: "allezon-redpanda-0.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-1.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-2.allezon-redpanda.default.svc.cluster.local:9093"
+    - name: DB_ADDRESSES
+      value: "allezon-aerospike.default.svc.cluster.local:3000"
+    - name: ID_GETTER_ADDRESS
+      value: "allezon-idgetter.default.svc.cluster.local:8080"
+
+idgetter:
+  env:
+    - name: DB_ADDRESSES
+      value: "allezon-aerospike.default.svc.cluster.local:3000"
+
+
+redpanda:
+  statefulset:
+    replicas: 3
+  nameOverride: redpanda
+  fullnameOverride: redpanda

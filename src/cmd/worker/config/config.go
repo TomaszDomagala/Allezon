@@ -22,9 +22,11 @@ func field(name string, defaultValue any) {
 }
 
 func New() (*Config, error) {
+	field("port", 8080)
+
 	field("kafka_addresses", []string{})
 	field("db_addresses", []string{})
-	field("port", 8080)
+	field("id_getter_address", "")
 
 	var c Config
 	_ = viper.Unmarshal(&c)

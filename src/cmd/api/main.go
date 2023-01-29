@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Shopify/sarama"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"go.uber.org/zap"
@@ -23,12 +24,21 @@ func main() {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
+	logger.Info("Initializing messaging", zap.Strings("addresses", conf.KafkaAddresses))
+	err = messaging.Initialize(logger, conf.KafkaAddresses, &sarama.TopicDetail{
+		NumPartitions:     conf.KafkaNumPartitions,
+		ReplicationFactor: conf.KafkaReplicationFactor,
+	})
+	if err != nil {
+		logger.Fatal("failed to initialize messaging", zap.Error(err), zap.Strings("addresses", conf.KafkaAddresses))
+	}
+
 	var producer messaging.UserTagsProducer
 	if conf.KafkaNullProducer {
 		logger.Info("Using null producer")
 		producer = messaging.NewNullProducer(logger)
 	} else {
-		logger.Info("Using kafka producer")
+		logger.Info("Using kafka producer", zap.Strings("addresses", conf.KafkaAddresses))
 		producer, err = messaging.NewProducer(logger, conf.KafkaAddresses)
 		if err != nil {
 			logger.Fatal("Error while creating producer", zap.Error(err))
@@ -40,7 +50,7 @@ func main() {
 		logger.Info("Using null database client")
 		dbClient = db.NewNullClient(logger)
 	} else {
-		logger.Info("Using aerospike database client")
+		logger.Info("Using aerospike database client, addresses: ", zap.Strings("addresses", conf.DBAddresses))
 		dbClient, err = db.NewClientFromAddresses(conf.DBAddresses)
 		if err != nil {
 			logger.Fatal("Error while creating database client", zap.Error(err))
@@ -52,7 +62,7 @@ func main() {
 		logger.Info("Using null id getter client")
 		getter = idGetter.NewNullClient(logger)
 	} else {
-		logger.Info("Using id getter client")
+		logger.Info("Using id getter client", zap.String("address", conf.IDGetterAddress))
 		getter = idGetter.NewClient(&http.Client{Timeout: time.Second}, conf.IDGetterAddress)
 	}
 

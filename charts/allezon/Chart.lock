@@ -1,0 +1,21 @@
+dependencies:
+- name: api
+  repository: file://../api
+  version: 0.1.0
+- name: worker
+  repository: file://../worker
+  version: 0.1.0
+- name: idgetter
+  repository: file://../idgetter
+  version: 0.1.0
+- name: kind-ingress-nginx
+  repository: file://../kind-ingress-nginx
+  version: 0.1.0
+- name: redpanda
+  repository: https://charts.redpanda.com
+  version: 2.6.0
+- name: aerospike
+  repository: https://aerospike.github.io/aerospike-kubernetes
+  version: 5.5.0
+digest: sha256:144268b144bfaea2620bab85c64a236ff2c37837689ea3805d0f72936aa5957b
+generated: "2023-01-29T17:13:03.685471795+01:00"
