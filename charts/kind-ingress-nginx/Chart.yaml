@@ -1,0 +1,9 @@
+apiVersion: v2
+name: kind-ingress-nginx
+description: A Helm chart for ingress-nginx configured for kind.
+
+type: application
+
+version: 0.1.0
+
+appVersion: "1.16.0"

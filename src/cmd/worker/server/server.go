@@ -40,7 +40,7 @@ func New(deps Dependencies) Server {
 	router.Use(ginzap.Ginzap(deps.Logger, time.RFC3339, true))
 	router.Use(ginzap.RecoveryWithZap(deps.Logger, true))
 
-	s := server{engine: router, logger: deps.Logger}
+	s := server{engine: router, logger: deps.Logger, port: deps.Port}
 
 	router.GET("/health", s.health)
 
