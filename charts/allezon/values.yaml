@@ -1,4 +1,7 @@
 api:
+  image:
+    tag: "0.2.0"
+  replicaCount: 5
   env:
     # Kafka configuration
     - name: KAFKA_NULL_PRODUCER
@@ -21,6 +24,9 @@ api:
       value: "allezon-idgetter.default.svc.cluster.local:8080"
 
 worker:
+  image:
+    tag: "0.2.0"
+  replicaCount: 3
   env:
     - name: PORT
       value: "8080"
@@ -32,6 +38,12 @@ worker:
       value: "allezon-idgetter.default.svc.cluster.local:8080"
 
 idgetter:
+  image:
+    tag: "0.2.0"
+  #  Should always be one, because as far as I understand it is a stateful service.
+  replicaCount: 1
+  autoscaling:
+    enabled: false
   env:
     - name: DB_ADDRESSES
       value: "allezon-aerospike.default.svc.cluster.local:3000"

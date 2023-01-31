@@ -20,14 +20,14 @@ type Client interface {
 }
 
 type client struct {
-	httpClient *http.Client
+	httpClient http.Client
 	addr       string
 
-	rwLock *sync.RWMutex
+	rwLock sync.RWMutex
 	cache  map[string]map[string]int32
 }
 
-func (c client) GetId(collectionName string, element string) (int32, error) {
+func (c *client) GetId(collectionName string, element string) (int32, error) {
 	id, ok := c.getFromCache(collectionName, element)
 	if ok {
 		return id, nil
@@ -41,7 +41,7 @@ func (c client) GetId(collectionName string, element string) (int32, error) {
 	return id, nil
 }
 
-func (c client) getIdFromServer(collectionName string, element string) (int32, error) {
+func (c *client) getIdFromServer(collectionName string, element string) (int32, error) {
 	body, err := json.Marshal(api.GetIdRequest{
 		CollectionName: collectionName,
 		Element:        element,
@@ -50,7 +50,7 @@ func (c client) getIdFromServer(collectionName string, element string) (int32, e
 		return 0, fmt.Errorf("failed to marshall body, %w", err)
 	}
 
-	resp, err := c.httpClient.Post(api.GetIdUrl, "application/json", bytes.NewReader(body))
+	resp, err := c.httpClient.Post(fmt.Sprintf("http://%s%s", c.addr, api.GetIdUrl), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return 0, fmt.Errorf("failed to make request to ip_getter, %w", err)
 	}
@@ -66,7 +66,7 @@ func (c client) getIdFromServer(collectionName string, element string) (int32, e
 	return res.Id, nil
 }
 
-func (c client) getFromCache(name string, element string) (int32, bool) {
+func (c *client) getFromCache(name string, element string) (int32, bool) {
 	c.rwLock.RLock()
 	defer c.rwLock.RUnlock()
 
@@ -77,7 +77,7 @@ func (c client) getFromCache(name string, element string) (int32, bool) {
 	return 0, false
 }
 
-func (c client) saveInCache(name string, element string, id int32) {
+func (c *client) saveInCache(name string, element string, id int32) {
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
@@ -88,6 +88,9 @@ func (c client) saveInCache(name string, element string, id int32) {
 	}
 }
 
-func NewClient(cl *http.Client, addr string) Client {
-	return client{httpClient: cl, addr: addr}
+func NewClient(cl http.Client, addr string) Client {
+	return &client{
+		httpClient: cl,
+		addr:       addr,
+	}
 }

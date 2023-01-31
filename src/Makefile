@@ -17,21 +17,26 @@ HELM_RELEASE_NAME ?= allezon
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
 export DOCKER_BUILDKIT = 1
 
+DOCKER_NAMESPACE ?= "tomaszdomagala"
+
 # api service config
-API_VERSION ?= "0.1.0"
-API_DOCKER_REPO ?= "allezon/api"
+API_VERSION ?= "0.2.0"
+API_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/allezon-api"
 API_DOCKERFILE ?= "api.Dockerfile"
 
 # id getter service config
-ID_GETTER_VERSION ?= "0.1.0"
-ID_GETTER_DOCKER_REPO ?= "allezon/idgetter"
+ID_GETTER_VERSION ?= "0.2.0"
+ID_GETTER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/allezon-idgetter"
 ID_GETTER_DOCKERFILE ?= "id_getter.Dockerfile"
 
 # worker service config
-WORKER_VERSION ?= "0.1.0"
-WORKER_DOCKER_REPO ?= "allezon/worker"
+WORKER_VERSION ?= "0.2.0"
+WORKER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/allezon-worker"
 WORKER_DOCKERFILE ?= "worker.Dockerfile"
 
+PORT_FORWARD_LOCAL_PORT ?= 8080
+PORT_FORWARD_REMOTE_PORT ?= 8080
+PORT_FORWARD_HOST ?= "rtb1"
 
 # Docker build targets.
 
@@ -49,6 +54,21 @@ docker-build-idgetter: ## Build the ID Getter docker image.
 .PHONY: docker-build-worker
 docker-build-worker: ## Build the Worker docker image.
 	docker build -t "$(WORKER_DOCKER_REPO):$(WORKER_VERSION)" -f "$(DOCKER_DIR)/$(WORKER_DOCKERFILE)" "$(SRC_DIR)"
+
+.PHONY: docker-push
+docker-push: docker-push-api docker-push-idgetter docker-push-worker ## Push all docker images.
+
+.PHONY: docker-push-api
+docker-push-api: ## Push the API docker image.
+	docker push "$(API_DOCKER_REPO):$(API_VERSION)"
+
+.PHONY: docker-push-idgetter
+docker-push-idgetter: ## Push the ID Getter docker image.
+	docker push "$(ID_GETTER_DOCKER_REPO):$(ID_GETTER_VERSION)"
+
+.PHONY: docker-push-worker
+docker-push-worker: ## Push the Worker docker image.
+	docker push "$(WORKER_DOCKER_REPO):$(WORKER_VERSION)"
 
 
 # Kind targets. Kind is a tool for running local Kubernetes clusters using Docker container "nodes".
@@ -109,6 +129,11 @@ local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade 
 
 .PHONY: local-deploy-update-helm
 local-deploy-update-helm: helm-dependency-update helm-upgrade ## Update and install helm charts on already running kind cluster.
+
+
+.PHONY: remote-port-forward
+remote-port-forward: ## Forward the local kind cluster port to the remote VM.
+	ssh -R  $(PORT_FORWARD_LOCAL_PORT):localhost:$(PORT_FORWARD_REMOTE_PORT) -N $(PORT_FORWARD_HOST)
 
 # Misc targets.
 
