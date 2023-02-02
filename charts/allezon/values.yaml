@@ -1,7 +1,7 @@
 api:
   image:
     tag: "0.2.0"
-  replicaCount: 5
+  replicaCount: 1
   env:
     # Kafka configuration
     - name: KAFKA_NULL_PRODUCER
@@ -9,7 +9,7 @@ api:
     - name: KAFKA_ADDRESSES
       value: "allezon-redpanda-0.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-1.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-2.allezon-redpanda.default.svc.cluster.local:9093"
     - name: KAFKA_NUM_PARTITIONS
-      value: "3"
+      value: "1"
     - name: KAFKA_REPLICATION_FACTOR
       value: "1"
     # Database configuration
@@ -26,7 +26,7 @@ api:
 worker:
   image:
     tag: "0.2.0"
-  replicaCount: 3
+  replicaCount: 1
   env:
     - name: PORT
       value: "8080"
@@ -51,6 +51,13 @@ idgetter:
 
 redpanda:
   statefulset:
-    replicas: 3
+    replicas: 1
   nameOverride: redpanda
   fullnameOverride: redpanda
+
+
+aerospike:
+  dbReplicas: 1 # Change to 3 in real deployment.
+  aerospikeNamespace: "allezon"
+  aerospikeNamespaceMemoryGB: "1"
+  aerospikeReplicationFactor: "1" # Change to 2 in real deployment.
