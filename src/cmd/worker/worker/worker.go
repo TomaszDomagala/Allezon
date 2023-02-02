@@ -43,11 +43,8 @@ func (w worker) Run(ctx context.Context) error {
 	defer close(aggregatesChan)
 
 	for i := 0; i < numProcessors; i++ {
-		ap := newAggregatesProcessor(w.db.Aggregates(), w.idGetter, w.logger)
-		go ap.run(aggregatesChan)
-
-		upp := newUserProfilesProcessor(w.db.UserProfiles(), w.logger)
-		go upp.run(userTagsChan)
+		go runAggregatesProcessor(aggregatesChan, w.idGetter, w.db.Aggregates(), w.logger)
+		go runUpdateUserProfileProcessor(userTagsChan, w.db.UserProfiles(), w.logger)
 	}
 
 	go func() {

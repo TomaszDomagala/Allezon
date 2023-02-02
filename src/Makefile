@@ -38,6 +38,13 @@ PORT_FORWARD_LOCAL_PORT ?= 8080
 PORT_FORWARD_REMOTE_PORT ?= 8080
 PORT_FORWARD_HOST ?= "rtb1"
 
+
+# Development targets.
+
+.PHONY: test
+test: ## Run go tests.
+	go test -v ./...
+
 # Docker build targets.
 
 .PHONY: docker-build
@@ -49,7 +56,7 @@ docker-build-api: ## Build the API docker image.
 
 .PHONY: docker-build-idgetter
 docker-build-idgetter: ## Build the ID Getter docker image.
-	docker build -t "$(ID_GETTER_DOCKER_REPO):$(ID_GETTER_VERSION)" -f "$(DOCKER_DIR)/$(ID_GETTER_DOCKERFILE)" "$(SRC_DIR)"
+	docker build -t "$(ID_GETTER_DOCKER_REPO):$(ID_GETTER_VERSION)" -t "$(ID_GETTER_DOCKER_REPO):latest" -f "$(DOCKER_DIR)/$(ID_GETTER_DOCKERFILE)" "$(SRC_DIR)"
 
 .PHONY: docker-build-worker
 docker-build-worker: ## Build the Worker docker image.

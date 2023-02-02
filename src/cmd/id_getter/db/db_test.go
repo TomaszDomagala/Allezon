@@ -39,7 +39,7 @@ var (
 			},
 			Cmd: []string{"--config-file", "/assets/aerospike.conf"},
 		},
-		AfterRun: func(env *container.Environment, resource *dockertest.Resource) error {
+		OnServicesCreated: func(env *container.Environment, resource *dockertest.Resource) error {
 			// Wait for the service to be ready.
 			env.Logger.Info("waiting for aerospike to start")
 			err := env.Pool.Retry(func() error {
@@ -120,20 +120,20 @@ func (s *DBSuite) Test_Ids() {
 	const name = "foobar"
 	t := "foo"
 
-	l, err := c.Append(name, t)
+	l, err := c.AppendElement(name, t)
 	s.Require().NoErrorf(err, "failed to create record")
 	s.Require().Equal(1, l, "list length mismatch")
 
-	got, err := c.Get(name)
+	got, err := c.GetElements(name)
 	s.Require().Equal([]string{t}, got)
 
 	t2 := "bar"
 
-	l2, err := c.Append(name, t2)
+	l2, err := c.AppendElement(name, t2)
 	s.Require().NoErrorf(err, "failed to update record")
 	s.Require().Equal(2, l2, "list length mismatch")
 
-	updated, err := c.Get(name)
+	updated, err := c.GetElements(name)
 	s.Require().Equal([]string{t, t2}, updated)
 }
 
@@ -144,14 +144,14 @@ func (s *DBSuite) Test_Ids_ErrorOnDuplicate() {
 	const name = "foobar"
 	t := "foo"
 
-	_, err = c.Append(name, t)
+	_, err = c.AppendElement(name, t)
 	s.Require().NoErrorf(err, "failed to create record")
 
-	got, err := c.Get(name)
+	got, err := c.GetElements(name)
 	s.Require().Equal([]string{t}, got)
 
 	t2 := "foo"
 
-	_, err = c.Append(name, t2)
+	_, err = c.AppendElement(name, t2)
 	s.Require().ErrorIs(err, ElementExists, "no error on element exists")
 }

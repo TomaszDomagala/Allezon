@@ -27,7 +27,7 @@ var (
 			Hostname:     "redpanda",
 			PortBindings: map[docker.Port][]docker.PortBinding{"9092/tcp": {{HostIP: "localhost", HostPort: "9092"}}},
 		},
-		AfterRun: func(env *container.Environment, _ *dockertest.Resource) error {
+		OnServicesCreated: func(env *container.Environment, _ *dockertest.Resource) error {
 			// Wait for the service to be ready.
 			env.Logger.Info("waiting for redpanda to start")
 			err := env.Pool.Retry(func() error {

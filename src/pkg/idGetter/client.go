@@ -16,25 +16,26 @@ const (
 )
 
 type Client interface {
-	GetId(collectionName string, element string) (id int32, err error)
+	GetID(collection string, element string) (id int32, err error)
 }
 
 type client struct {
 	httpClient http.Client
 	addr       string
 
-	rwLock sync.RWMutex
-	cache  map[string]map[string]int32
+	cacheEnabled bool
+	rwLock       sync.RWMutex
+	cache        map[string]map[string]int32
 }
 
-func (c *client) GetId(collectionName string, element string) (int32, error) {
+func (c *client) GetID(collectionName string, element string) (int32, error) {
 	id, ok := c.getFromCache(collectionName, element)
 	if ok {
 		return id, nil
 	}
 	id, err := c.getIdFromServer(collectionName, element)
 	if err != nil {
-		return id, fmt.Errorf("error gettind id from server, %w", err)
+		return id, fmt.Errorf("error getting id from the server, %w", err)
 	}
 	c.saveInCache(collectionName, element, id)
 
@@ -67,6 +68,10 @@ func (c *client) getIdFromServer(collectionName string, element string) (int32, 
 }
 
 func (c *client) getFromCache(name string, element string) (int32, bool) {
+	if !c.cacheEnabled {
+		return 0, false
+	}
+
 	c.rwLock.RLock()
 	defer c.rwLock.RUnlock()
 
@@ -78,6 +83,10 @@ func (c *client) getFromCache(name string, element string) (int32, bool) {
 }
 
 func (c *client) saveInCache(name string, element string, id int32) {
+	if !c.cacheEnabled {
+		return
+	}
+
 	c.rwLock.Lock()
 	defer c.rwLock.Unlock()
 
@@ -88,9 +97,21 @@ func (c *client) saveInCache(name string, element string, id int32) {
 	}
 }
 
+// NewClient returns a client with enabled cache.
 func NewClient(cl http.Client, addr string) Client {
 	return &client{
-		httpClient: cl,
-		addr:       addr,
+		httpClient:   cl,
+		addr:         addr,
+		cache:        make(map[string]map[string]int32),
+		cacheEnabled: true,
+	}
+}
+
+// NewPureClient returns a client with disabled cache.
+func NewPureClient(cl http.Client, addr string) Client {
+	return &client{
+		httpClient:   cl,
+		addr:         addr,
+		cacheEnabled: false,
 	}
 }

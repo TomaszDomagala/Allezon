@@ -36,6 +36,8 @@ type server struct {
 	idsCacheMutex *sync.RWMutex
 }
 
+var ErrorNotFound = errors.New("not found")
+
 func (s server) Run() error {
 	s.logger.Info("Starting server", zap.Int("port", s.conf.Port))
 	return s.engine.Run(fmt.Sprintf(":%d", s.conf.Port))
@@ -45,7 +47,7 @@ func (s server) health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-func (s server) getId(c *gin.Context) {
+func (s server) getIDHandler(c *gin.Context) {
 	var req api.GetIdRequest
 
 	body, err := c.GetRawData()
@@ -54,14 +56,14 @@ func (s server) getId(c *gin.Context) {
 		return
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
-		s.logger.Error("can't unmarshal request: %s", zap.Error(err), zap.ByteString("body", body))
+		s.logger.Error("can't unmarshal request", zap.Error(err), zap.ByteString("body", body))
 		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
-	id, err := s.getIdHelper(req.CollectionName, req.Element)
+	id, err := s.getID(req.CollectionName, req.Element)
 	if err != nil {
-		s.logger.Error("couldn't get id, %s", zap.Error(err))
+		s.logger.Error("can't get id", zap.Error(err), zap.String("collection", req.CollectionName), zap.String("element", req.Element))
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
@@ -70,73 +72,80 @@ func (s server) getId(c *gin.Context) {
 	return
 }
 
-func (s server) getIdHelper(name string, element string) (int, error) {
-	if id, inCache := s.checkInCache(name, element); inCache {
+// getID returns id of element in category. It tries to find it in cache first, then in database.
+// If it's not found in db, it generates new id and caches it.
+func (s server) getID(category string, element string) (int, error) {
+	if id, inCache := s.checkInCache(category, element); inCache {
 		return id, nil
 	}
-	colLen, err := s.db.Append(name, element)
+
+	id, err := s.getIDFromDB(category, element)
 	if err != nil {
-		if errors.Is(err, db.ElementExists) {
-			return s.getIdFromDb(name, element)
+		if !errors.Is(err, ErrorNotFound) {
+			return 0, fmt.Errorf("error while getting id from db: %w", err)
 		}
-		return 0, fmt.Errorf("error while appending record %w", err)
+		// element not found in db, save it and return new id.
+		id, err = s.saveIDInDB(category, element)
+		if err != nil {
+			return 0, fmt.Errorf("error while saving id in db: %w", err)
+		}
 	}
 
-	s.saveInCache(name, element, colLen)
-	return colLen, nil
+	s.saveInCache(category, element, id)
+	return id, nil
 }
 
-func (s server) checkInCache(name string, element string) (int, bool) {
+// getIDFromDB returns id of element in category.
+// It fetches the whole list from db and then searches for element in it.
+// Index of element in list is returned as its id.
+func (s server) getIDFromDB(category string, element string) (int, error) {
+	list, err := s.db.GetElements(category)
+	if err != nil {
+		if errors.Is(err, db.KeyNotFoundError) {
+			return 0, fmt.Errorf("error while getting elements from db: %w", ErrorNotFound)
+		}
+		return 0, fmt.Errorf("error while getting elements from db: %w", err)
+	}
+	idx := slices.Index(list, element)
+	if idx == -1 {
+		return 0, fmt.Errorf("element not found in list, %w: (%v, %v)", ErrorNotFound, category, element)
+	}
+	s.logger.Debug("found id in db", zap.String("category", category), zap.String("element", element), zap.Int("id", idx))
+	return idx, nil
+}
+
+// saveIDInDB saves element in category and returns its id.
+func (s server) saveIDInDB(category string, element string) (int, error) {
+	id, err := s.db.AppendElement(category, element)
+	if err != nil {
+		return 0, fmt.Errorf("error while appending record %w", err)
+	}
+	s.logger.Debug("saved id in db", zap.String("category", category), zap.String("element", element), zap.Int("id", id))
+	return id, nil
+
+}
+
+func (s server) checkInCache(category string, element string) (int, bool) {
 	s.idsCacheMutex.RLock()
 	defer s.idsCacheMutex.RUnlock()
 
-	if cache, ok := s.idsCache[name]; ok {
+	if cache, ok := s.idsCache[category]; ok {
 		if id, ok := cache[element]; ok {
+			s.logger.Debug("found id in cache", zap.String("category", category), zap.String("element", element), zap.Int("id", id))
 			return id, true
 		}
 	}
 	return 0, false
 }
 
-func (s server) getIdFromDb(name string, element string) (int, error) {
-	list, err := s.db.Get(name)
-	if err != nil {
-		return 0, fmt.Errorf("couldn't get list from db, %w", err)
-	}
-	idx := slices.Index(list, element)
-	if idx == -1 {
-		return 0, fmt.Errorf("element not found in list, %w", err)
-	}
-	s.saveListInCache(name, list)
-
-	return idx, nil
-}
-
-func (s server) saveInCache(name string, element string, colLen int) {
+func (s server) saveInCache(category string, element string, colLen int) {
 	s.idsCacheMutex.Lock()
 	defer s.idsCacheMutex.Unlock()
 
-	if cache, ok := s.idsCache[name]; ok {
-		cache[element] = colLen
-	} else {
-		s.idsCache[name] = map[string]int{
-			element: colLen,
-		}
+	if _, ok := s.idsCache[category]; !ok {
+		s.idsCache[category] = make(map[string]int)
 	}
-}
-
-func (s server) saveListInCache(name string, list []string) {
-	s.idsCacheMutex.Lock()
-	defer s.idsCacheMutex.Unlock()
-
-	cache, ok := s.idsCache[name]
-	if !ok {
-		cache = make(map[string]int, len(list))
-	}
-	for i, el := range list {
-		cache[el] = i
-	}
-	s.idsCache[name] = cache
+	s.idsCache[category][element] = colLen
 }
 
 func New(deps Dependencies) Server {
@@ -156,7 +165,7 @@ func New(deps Dependencies) Server {
 
 	router.GET("/health", s.health)
 
-	router.POST(api.GetIdUrl, s.getId)
+	router.POST(api.GetIdUrl, s.getIDHandler)
 
 	return s
 }
