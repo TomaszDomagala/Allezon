@@ -5,11 +5,12 @@ package container
 import (
 	"fmt"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
+	"go.uber.org/zap"
 	"math/rand"
 	"strings"
-
-	"github.com/ory/dockertest/v3"
-	"go.uber.org/zap"
+	"time"
 )
 
 // OnServiceCreated is a callback that is called after the service is started.
@@ -37,10 +38,11 @@ func (s *Service) ExposedHostPort() string {
 
 // Environment is a test suite that starts docker containers before the test and stops them after the test.
 type Environment struct {
-	Name     string
-	Logger   *zap.Logger
-	Config   *Config
-	services []*Service
+	Name   string
+	Logger *zap.Logger
+	Config *Config
+	// Services is a list of services that will be started for the test.
+	Services []*Service
 
 	Pool *dockertest.Pool
 
@@ -56,13 +58,13 @@ func NewEnvironment(name string, logger *zap.Logger, services []*Service, config
 	return &Environment{
 		Name:     name,
 		Logger:   logger,
-		services: services,
+		Services: services,
 		Config:   config,
 	}
 }
 
 func (env *Environment) GetService(name string) *Service {
-	for _, service := range env.services {
+	for _, service := range env.Services {
 		if service.Name == name {
 			return service
 		}
@@ -92,7 +94,7 @@ func (env *Environment) Run() error {
 		return fmt.Errorf("could not create network: %w", err)
 	}
 
-	for _, service := range env.services {
+	for _, service := range env.Services {
 		err = env.addService(service)
 		if err != nil {
 			return fmt.Errorf("could not add service %s: %w", service.Name, err)
@@ -102,14 +104,26 @@ func (env *Environment) Run() error {
 	return nil
 }
 
-// AddService adds a service to the environment and starts it. It should be called after Run.
-// It is useful for creating services in specific order and synchronously.
-func (env *Environment) AddService(service *Service) {
-	env.services = append(env.services, service)
-	err := env.addService(service)
-	if err != nil {
-		panic(fmt.Errorf("could not add service %s: %w", service.Name, err))
+// GetLogs returns stdout and stderr logs of a service.
+func (env *Environment) GetLogs(serviceName string) (string, string, error) {
+	service := env.GetService(serviceName)
+	if service == nil {
+		return "", "", fmt.Errorf("service %s not found", serviceName)
 	}
+	var stdout, stderr strings.Builder
+
+	err := env.Pool.Client.Logs(docker.LogsOptions{
+		Container:         service.Resource.Container.ID,
+		OutputStream:      &stdout,
+		ErrorStream:       &stderr,
+		Stdout:            true,
+		Stderr:            true,
+		InactivityTimeout: time.Second * 10,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("could not get logs: %w", err)
+	}
+	return stdout.String(), stderr.String(), nil
 }
 
 // addService starts a service container and runs its OnServicesCreated callback.
