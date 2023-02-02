@@ -95,8 +95,6 @@ func (s *DBSuite) SetupTest() {
 	if err != nil {
 		a, e := os.Getwd()
 		fmt.Println(a, e)
-		errClose := s.env.Close()
-		s.Assert().NoErrorf(errClose, "could not close environment after error")
 		s.Require().NoErrorf(err, "could not run environment")
 	}
 }

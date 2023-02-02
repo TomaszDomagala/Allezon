@@ -194,17 +194,17 @@ func (env *Environment) Close() error {
 			continue
 		}
 		env.Logger.Info("stopping container", zap.String("container_id", resource.Container.ID))
-		err := env.Pool.Purge(resource)
+		err := resource.Close()
 		if err != nil {
 			errs = append(errs, fmt.Errorf("could not stop container %s: %w", resource.Container.Name, err))
 		}
 	}
-	//if env.network != nil {
-	//	err := env.Pool.RemoveNetwork(env.network)
-	//	if err != nil {
-	//		errs = append(errs, fmt.Errorf("could not remove network: %w", err))
-	//	}
-	//}
+	if env.network != nil {
+		err := env.network.Close()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("could not remove network: %w", err))
+		}
+	}
 
 	if len(errs) > 0 {
 		return fmt.Errorf("could not tear down environment: %v", errs)

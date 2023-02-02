@@ -2,15 +2,16 @@ package db
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func absPath(path string) string {
@@ -91,8 +92,6 @@ func (s *DBSuite) SetupTest() {
 	if err != nil {
 		a, e := os.Getwd()
 		fmt.Println(a, e)
-		errClose := s.env.Close()
-		s.Assert().NoErrorf(errClose, "could not close environment after error")
 		s.Require().NoErrorf(err, "could not run environment")
 	}
 }

@@ -2,13 +2,15 @@ package messaging
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/Shopify/sarama"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"testing"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 )
@@ -113,9 +115,10 @@ func (s *MessagingSuite) SetupSuite() {
 func (s *MessagingSuite) SetupTest() {
 	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{redpandaService}, nil)
 	err := s.env.Run()
+
 	if err != nil {
-		errClose := s.env.Close()
-		s.Assert().NoErrorf(errClose, "could not close environment after error")
+		a, e := os.Getwd()
+		fmt.Println(a, e)
 		s.Require().NoErrorf(err, "could not run environment")
 	}
 }
