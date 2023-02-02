@@ -4,16 +4,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"net/http"
-	"os"
-	"path"
-	"testing"
-	"time"
 )
 
 type AllezonIntegrationTestSuite struct {
@@ -126,26 +131,25 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 		newTag(now.Add(2*time.Hour), "VIEW"),
 	}
 
-	// TODO: uncomment after the bug in worker is fixed
-	//profileRequests := []struct {
-	//	cookie   string
-	//	from, to time.Time
-	//	limit    int
-	//
-	//	expected dto.UserProfileDTO
-	//}{
-	//	{
-	//		from:   now,
-	//		to:     now.Add(1 * time.Hour),
-	//		cookie: cookie,
-	//
-	//		expected: dto.UserProfileDTO{
-	//			Cookie: cookie,
-	//			Views:  []dto.UserTagDTO{userTags[0]},
-	//			Buys:   []dto.UserTagDTO{},
-	//		},
-	//	},
-	//}
+	profileRequests := []struct {
+		cookie   string
+		from, to time.Time
+		limit    int
+
+		expected dto.UserProfileDTO
+	}{
+		{
+			from:   now,
+			to:     now.Add(1 * time.Hour),
+			cookie: cookie,
+
+			expected: dto.UserProfileDTO{
+				Cookie: cookie,
+				Views:  []dto.UserTagDTO{userTags[0]},
+				Buys:   []dto.UserTagDTO{},
+			},
+		},
+	}
 
 	client := http.Client{Timeout: 5 * time.Second}
 
@@ -163,30 +167,36 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 		s.Assert().Equalf(http.StatusNoContent, res.StatusCode, "unexpected status code")
 	}
 
-	// TODO: uncomment after the bug in worker is fixed
-	//workersWaitTime := 10 * time.Second
-	//s.logger.Info("Waiting for workers to process tags", zap.Duration("time", workersWaitTime))
-	//time.Sleep(workersWaitTime)
-	//
-	//for _, profileReq := range profileRequests {
-	//	params := url.Values{}
-	//	params.Add("from", profileReq.from.Format(dto.UserTagTimeLayout))
-	//	params.Add("to", profileReq.to.Format(dto.UserTagTimeLayout))
-	//	if profileReq.limit > 0 {
-	//		params.Add("limit", strconv.Itoa(profileReq.limit))
-	//	}
-	//
-	//	reqUrl := address + "/user_profiles/" + profileReq.cookie + "?" + params.Encode()
-	//	req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
-	//	s.Require().NoErrorf(err, "could not create request")
-	//
-	//	res, err := client.Do(req)
-	//	s.Assert().NoErrorf(err, "could not send request")
-	//	s.Assert().Equalf(http.StatusOK, res.StatusCode, "unexpected status code")
-	//
-	//	var profile dto.UserProfileDTO
-	//	err = json.NewDecoder(res.Body).Decode(&profile)
-	//	s.Assert().NoErrorf(err, "could not decode response body")
-	//	s.Assert().Equalf(profileReq.expected, profile, "unexpected profile")
-	//}
+	const workersWaitTime = 10 * time.Second
+	s.logger.Info("Waiting for workers to process tags", zap.Duration("time", workersWaitTime))
+	time.Sleep(workersWaitTime)
+
+	for _, profileReq := range profileRequests {
+		params := url.Values{}
+
+		from := profileReq.from.Format(dto.TimeRangeMilliPrecisionLayout)
+		to := profileReq.to.Format(dto.TimeRangeMilliPrecisionLayout)
+		params.Add("time_range", fmt.Sprintf("%s_%s", from, to))
+
+		if profileReq.limit > 0 {
+			params.Add("limit", strconv.Itoa(profileReq.limit))
+		}
+
+		reqUrl := address + "/user_profiles/" + profileReq.cookie + "?" + params.Encode()
+		req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
+		s.Require().NoErrorf(err, "could not create request")
+
+		res, err := client.Do(req)
+		s.Assert().NoErrorf(err, "could not send request")
+		if res.StatusCode != http.StatusOK {
+			body, err := io.ReadAll(res.Body)
+			s.Assert().Equalf(http.StatusOK, res.StatusCode, `unexpected status code, status: %s, body "%s".\nRequest Params: %s.`, res.Status, body, spew.Sprintln(params), params.Encode())
+			s.Assert().NoErrorf(err, "error file reading request body")
+		}
+
+		var profile dto.UserProfileDTO
+		err = json.NewDecoder(res.Body).Decode(&profile)
+		s.Assert().NoErrorf(err, "could not decode response body")
+		s.Assert().Equalf(profileReq.expected, profile, "unexpected profile")
+	}
 }

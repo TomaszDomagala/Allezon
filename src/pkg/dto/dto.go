@@ -2,11 +2,14 @@ package dto
 
 import (
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"time"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 const UserTagTimeLayout = "2006-01-02T15:04:05.999Z"
+const TimeRangeMilliPrecisionLayout = "2006-01-02T15:04:05.999"
+const TimeRangeSecPrecisionLayout = "2006-01-02T15:04:05"
 
 // UserTagDTO is a data transfer object for types.UserTag.
 type UserTagDTO struct {

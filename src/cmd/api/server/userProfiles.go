@@ -3,19 +3,18 @@ package server
 import (
 	"errors"
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
-
-const timeRangeMilliPrecisionLayout = "2006-01-02T15:04:05.999"
 
 func parseTimeRange(layout, str string) (time.Time, time.Time, error) {
 	split := strings.Split(str, "_")
@@ -40,7 +39,7 @@ func (s server) userProfilesHandler(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusBadRequest, errors.New("request must contain a time range"))
 		return
 	}
-	from, to, err := parseTimeRange(timeRangeMilliPrecisionLayout, trStr)
+	from, to, err := parseTimeRange(dto.TimeRangeMilliPrecisionLayout, trStr)
 	if err != nil {
 		s.logger.Error("error parsing time range", zap.Error(err))
 		_ = c.AbortWithError(http.StatusBadRequest, err)
@@ -67,6 +66,9 @@ func (s server) userProfilesHandler(c *gin.Context) {
 }
 
 func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.UserTagDTO {
+	if limit == 0 {
+		return nil
+	}
 	toMilli := to.UnixMilli()
 	fromMilli := from.UnixMilli()
 	// Tags we get from DB are sorted in ascending order.
@@ -75,6 +77,9 @@ func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.User
 		milli := tag.Time.UnixMilli()
 		if fromMilli <= milli && milli < toMilli {
 			selected = append(selected, dto.IntoUserTagDTO(tag))
+			if len(selected) == limit {
+				break
+			}
 		}
 	}
 	return selected
