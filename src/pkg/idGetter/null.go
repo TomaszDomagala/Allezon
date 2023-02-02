@@ -6,8 +6,8 @@ type nullClient struct {
 	logger *zap.Logger
 }
 
-func (n *nullClient) GetId(collectionName string, element string) (id int32, err error) {
-	n.logger.Debug("null client invoked", zap.String("method", "GetId"), zap.String("collectionName", collectionName), zap.String("element", element))
+func (n *nullClient) GetID(collectionName string, element string) (id int32, err error) {
+	n.logger.Debug("null client invoked", zap.String("method", "GetID"), zap.String("collectionName", collectionName), zap.String("element", element))
 	return 0, nil
 }
 

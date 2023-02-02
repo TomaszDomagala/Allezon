@@ -7,7 +7,7 @@ import (
 	"github.com/aerospike/aerospike-client-go/v6/types"
 )
 
-const userProfilesNamespace = "user_profiles"
+const userProfilesSet = "user_profiles"
 const userProfilesViewsBin = "views"
 const userProfilesBuysBin = "buys"
 
@@ -17,7 +17,7 @@ type userProfileClient struct {
 
 func (u userProfileClient) Get(cookie string) (res GetResult[UserProfile], err error) {
 	// TODO Get in case of update may be optimized to only Get affected bin.
-	key, err := as.NewKey(userProfilesNamespace, "", cookie)
+	key, err := as.NewKey(AllezonNamespace, userProfilesSet, cookie)
 	if err != nil {
 		return res, err
 	}
@@ -52,7 +52,7 @@ func (u userProfileClient) Get(cookie string) (res GetResult[UserProfile], err e
 
 func (u userProfileClient) Update(cookie string, userProfile UserProfile, generation Generation) error {
 	// TODO Update may only update affected bin.
-	key, ae := as.NewKey(userProfilesNamespace, "", cookie)
+	key, ae := as.NewKey(AllezonNamespace, userProfilesSet, cookie)
 	if ae != nil {
 		return ae
 	}

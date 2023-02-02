@@ -11,9 +11,13 @@ import (
 
 //go:generate protoc -I=./ --go_out=./ ./aggregates.proto
 
-const aggregatesNamespace = "aggregates"
-const aggregatesViewsBin = "views"
-const aggregatesBuysBin = "buys"
+const (
+	// aggregatesSet is the name of the set used for storing aggregates.
+	aggregatesSet = "aggregates"
+
+	aggregatesViewsBin = "views"
+	aggregatesBuysBin  = "buys"
+)
 
 type aggregatesClient struct {
 	cl *as.Client
@@ -79,7 +83,7 @@ func marshallTypeAggregates(t TypeAggregates) ([]byte, error) {
 
 func (a aggregatesClient) Get(minuteStart time.Time) (res GetResult[Aggregates], err error) {
 	// TODO we can only get required bin.
-	key, err := as.NewKey(aggregatesNamespace, "", timeToKey(minuteStart))
+	key, err := as.NewKey(AllezonNamespace, aggregatesSet, timeToKey(minuteStart))
 	if err != nil {
 		return res, err
 	}
@@ -115,7 +119,7 @@ func (a aggregatesClient) Get(minuteStart time.Time) (res GetResult[Aggregates],
 func (a aggregatesClient) Update(minuteStart time.Time, aggregates Aggregates, generation Generation) error {
 	// TODO we can only update required bin.
 	name := timeToKey(minuteStart)
-	key, ae := as.NewKey(aggregatesNamespace, "", name)
+	key, ae := as.NewKey(AllezonNamespace, aggregatesSet, name)
 	if ae != nil {
 		return ae
 	}

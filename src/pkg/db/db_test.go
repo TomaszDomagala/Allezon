@@ -41,7 +41,7 @@ var (
 			},
 			Cmd: []string{"--config-file", "/assets/aerospike.conf"},
 		},
-		AfterRun: func(env *container.Environment, resource *dockertest.Resource) error {
+		OnServicesCreated: func(env *container.Environment, resource *dockertest.Resource) error {
 			// Wait for the service to be ready.
 			env.Logger.Info("waiting for aerospike to start")
 			err := env.Pool.Retry(func() error {

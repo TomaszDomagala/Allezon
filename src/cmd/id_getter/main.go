@@ -18,11 +18,13 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
+	logger.Info("Config loaded: ", zap.Any("config", conf))
 
 	client, err := db.NewClientFromAddresses(conf.DBAddresses)
 	if err != nil {
 		logger.Fatal("Error while creating database client", zap.Error(err))
 	}
+	logger.Info("Database client created")
 
 	srv := server.New(server.Dependencies{
 		Logger: logger,

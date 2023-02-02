@@ -12,13 +12,27 @@ import (
 	"go.uber.org/zap"
 )
 
+// OnServiceCreated is a callback that is called after the service is started.
+type OnServiceCreated func(environment *Environment, resource *dockertest.Resource) error
+
 // Service is a docker container that will be started for the test.
 type Service struct {
 	Name    string
 	Options *dockertest.RunOptions
-	// AfterRun callback is called after the container is started.
+	// OnServicesCreated callback is called after the container is started.
 	// It can be used to wait for the container to be ready, check if the container is healthy, set up, etc.
-	AfterRun func(env *Environment, resource *dockertest.Resource) error
+	OnServicesCreated OnServiceCreated
+
+	// resource is the resource that is created by the dockertest pool.
+	resource *dockertest.Resource
+}
+
+// ExposedHostPort returns first exposed port of the service.
+func (s *Service) ExposedHostPort() string {
+	if len(s.Options.ExposedPorts) == 0 {
+		return ""
+	}
+	return s.resource.GetHostPort(s.Options.ExposedPorts[0])
 }
 
 // Environment is a test suite that starts docker containers before the test and stops them after the test.
@@ -28,11 +42,13 @@ type Environment struct {
 	Config   *Config
 	services []*Service
 
-	Pool      *dockertest.Pool
+	Pool *dockertest.Pool
+
 	resources []*dockertest.Resource
-	//network   *dockertest.Network
+	network   *dockertest.Network
 }
 
+// NewEnvironment creates a new environment and starts the services.
 func NewEnvironment(name string, logger *zap.Logger, services []*Service, config *Config) *Environment {
 	if config == nil {
 		config = NewConfig()
@@ -45,61 +61,93 @@ func NewEnvironment(name string, logger *zap.Logger, services []*Service, config
 	}
 }
 
-func (s *Environment) Run() error {
+func (env *Environment) GetService(name string) *Service {
+	for _, service := range env.services {
+		if service.Name == name {
+			return service
+		}
+	}
+	return nil
+}
+
+func (env *Environment) Run() error {
 	var err error
 
-	s.Logger, err = zap.NewDevelopment()
+	env.Logger, err = zap.NewDevelopment()
 	if err != nil {
 		return fmt.Errorf("could not create logger: %w", err)
 	}
-	s.Pool, err = dockertest.NewPool("")
+	env.Pool, err = dockertest.NewPool("")
 	if err != nil {
 		return fmt.Errorf("could not connect to pool: %w", err)
 	}
 
-	err = s.Pool.Client.Ping()
+	err = env.Pool.Client.Ping()
 	if err != nil {
 		return fmt.Errorf("could not ping pool: %w", err)
 	}
 
-	//s.network, err = s.Pool.CreateNetwork(prefixTestName(s.Name, "network"))
+	env.network, err = env.Pool.CreateNetwork(env.dockerString("network"))
 	if err != nil {
 		return fmt.Errorf("could not create network: %w", err)
 	}
 
-	for _, service := range s.services {
-		options := service.Options
-		options.Name = s.dockerString(service.Name)
-
-		r, err := s.startService(options)
+	for _, service := range env.services {
+		err = env.addService(service)
 		if err != nil {
-			return fmt.Errorf("could not start container %s: %w", options.Name, err)
+			return fmt.Errorf("could not add service %s: %w", service.Name, err)
 		}
-		s.resources = append(s.resources, r)
-
-		if service.AfterRun != nil {
-			err = service.AfterRun(s, r)
-			if err != nil {
-				return fmt.Errorf("error running AfterRun function: %w", err)
-			}
-		}
-
 	}
 
 	return nil
 }
 
+// AddService adds a service to the environment and starts it. It should be called after Run.
+// It is useful for creating services in specific order and synchronously.
+func (env *Environment) AddService(service *Service) {
+	env.services = append(env.services, service)
+	err := env.addService(service)
+	if err != nil {
+		panic(fmt.Errorf("could not add service %s: %w", service.Name, err))
+	}
+}
+
+// addService starts a service container and runs its OnServicesCreated callback.
+func (env *Environment) addService(service *Service) error {
+	options := service.Options
+	if env.network != nil {
+		options.Networks = []*dockertest.Network{env.network}
+	}
+
+	options.Name = env.dockerString(service.Name)
+
+	r, err := env.startService(options)
+	if err != nil {
+		return fmt.Errorf("could not start container %s: %w", options.Name, err)
+	}
+	env.resources = append(env.resources, r)
+	service.resource = r
+
+	if service.OnServicesCreated != nil {
+		err = service.OnServicesCreated(env, r)
+		if err != nil {
+			return fmt.Errorf("error running OnServicesCreated function: %w", err)
+		}
+	}
+	return nil
+}
+
 // startService tries to start a service using exponential backoff.
-func (s *Environment) startService(options *dockertest.RunOptions) (*dockertest.Resource, error) {
+func (env *Environment) startService(options *dockertest.RunOptions) (*dockertest.Resource, error) {
 	var resource *dockertest.Resource
 
 	bo := backoff.NewExponentialBackOff()
-	bo.MaxElapsedTime = s.Config.ServiceStartMaxTime
-	bo.MaxInterval = s.Config.ServiceStartMaxInterval
+	bo.MaxElapsedTime = env.Config.ServiceStartMaxTime
+	bo.MaxInterval = env.Config.ServiceStartMaxInterval
 
 	err := backoff.Retry(func() error {
 		var err error
-		resource, err = s.doStartService(options)
+		resource, err = env.doStartService(options)
 		return err
 	}, bo)
 
@@ -109,35 +157,35 @@ func (s *Environment) startService(options *dockertest.RunOptions) (*dockertest.
 	return resource, nil
 }
 
-func (s *Environment) doStartService(options *dockertest.RunOptions) (*dockertest.Resource, error) {
-	if err := s.Pool.RemoveContainerByName(options.Name); err != nil {
-		s.Logger.Error("could not remove container", zap.Error(err), zap.String("name", options.Name))
+func (env *Environment) doStartService(options *dockertest.RunOptions) (*dockertest.Resource, error) {
+	if err := env.Pool.RemoveContainerByName(options.Name); err != nil {
+		env.Logger.Error("could not remove container", zap.Error(err), zap.String("name", options.Name))
 	}
-	resource, err := s.Pool.RunWithOptions(options)
+	resource, err := env.Pool.RunWithOptions(options)
 	if err != nil {
 		return nil, fmt.Errorf("could not start container %s: %w", options.Name, err)
 	}
-	s.Logger.Info("started container", zap.String("container_id", resource.Container.ID))
+	env.Logger.Info("started container", zap.String("container_id", resource.Container.ID))
 	return resource, nil
 }
 
-func (s *Environment) Close() error {
+func (env *Environment) Close() error {
 	var errs []error
 
-	s.Logger.Info("tearing down test", zap.String("test_name", s.Name))
+	env.Logger.Info("tearing down test", zap.String("test_name", env.Name))
 
-	for _, resource := range s.resources {
+	for _, resource := range env.resources {
 		if resource == nil {
 			continue
 		}
-		s.Logger.Info("stopping container", zap.String("container_id", resource.Container.ID))
-		err := s.Pool.Purge(resource)
+		env.Logger.Info("stopping container", zap.String("container_id", resource.Container.ID))
+		err := env.Pool.Purge(resource)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("could not stop container %s: %w", resource.Container.Name, err))
 		}
 	}
-	//if s.network != nil {
-	//	err := s.Pool.RemoveNetwork(s.network)
+	//if env.network != nil {
+	//	err := env.Pool.RemoveNetwork(env.network)
 	//	if err != nil {
 	//		errs = append(errs, fmt.Errorf("could not remove network: %w", err))
 	//	}
@@ -151,11 +199,11 @@ func (s *Environment) Close() error {
 
 // dockerString returns a name prefixed with the test name, in a docker friendly way.
 // If ServiceNameRandomSuffix is set, a random suffix is added to the name.
-func (s *Environment) dockerString(name string) string {
-	test := strings.Replace(s.Name, "/", "-", -1)
+func (env *Environment) dockerString(name string) string {
+	test := strings.Replace(env.Name, "/", "-", -1)
 	var suffix string
-	if s.Config.ServiceNameRandomSuffix {
-		suffix = fmt.Sprintf("-%s", randString(s.Config.ServiceNameRandomSuffixLength))
+	if env.Config.ServiceNameRandomSuffix {
+		suffix = fmt.Sprintf("-%s", randString(env.Config.ServiceNameRandomSuffixLength))
 	}
 
 	return fmt.Sprintf("%s-%s%s", test, name, suffix)

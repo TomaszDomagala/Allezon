@@ -3,47 +3,61 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
+	"go.uber.org/zap"
+	"time"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
-	"go.uber.org/zap"
 )
 
-type aggregatesProcessor struct {
-	aggregates db.AggregatesClient
-	idGetter   idGetter.Client
-	base       baseProcessor
+// aggregatesBackoff is a backoff strategy used to update aggregates.
+var aggregatesBackoff = backoff.ExponentialBackOff{
+	InitialInterval:     10 * time.Millisecond,
+	RandomizationFactor: backoff.DefaultRandomizationFactor,
+	Multiplier:          backoff.DefaultMultiplier,
+	MaxInterval:         500 * time.Second,
+	MaxElapsedTime:      10 * time.Second,
+	Stop:                backoff.Stop,
+	Clock:               backoff.SystemClock,
 }
 
-func newAggregatesProcessor(aggregates db.AggregatesClient, idGetter idGetter.Client, logger *zap.Logger) aggregatesProcessor {
-	a := aggregatesProcessor{
-		aggregates: aggregates,
-		idGetter:   idGetter,
+func runAggregatesProcessor(tagsChan <-chan types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, logger *zap.Logger) {
+	for tag := range tagsChan {
+		if err := updateAggregatesBackoff(tag, idsClient, aggregates, aggregatesBackoff); err != nil {
+			logger.Error("error updating aggregates", zap.Error(err))
+		}
 	}
-	a.base = newBaseProcessor(a.processTagOnce, logger)
-	return a
 }
 
-func (p aggregatesProcessor) run(tagsChan <-chan types.UserTag) {
-	p.base.run(tagsChan)
+// updateAggregatesBackoff updates aggregates with the given tag and retries on error according to the given backoff strategy.
+func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, bo backoff.ExponentialBackOff) error {
+	err := backoff.Retry(func() error {
+		return updateAggregates(tag, idsClient, aggregates)
+	}, &bo)
+	if err != nil {
+		return fmt.Errorf("error backoff updating aggregates, %w", err)
+	}
+	return nil
 }
 
-func (p aggregatesProcessor) processTagOnce(tag types.UserTag) error {
-	categoryId, err := p.idGetter.GetId(idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
+// updateAggregates updates aggregates with the given tag.
+func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient) error {
+	categoryId, err := idsClient.GetID(idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
 	if err != nil {
 		return fmt.Errorf("error getting category id of tag, %w", err)
 	}
-	brandId, err := p.idGetter.GetId(idGetter.BrandCollection, tag.ProductInfo.BrandId)
+	brandId, err := idsClient.GetID(idGetter.BrandCollection, tag.ProductInfo.BrandId)
 	if err != nil {
 		return fmt.Errorf("error getting brand id of tag, %w", err)
 	}
-	originId, err := p.idGetter.GetId(idGetter.OriginCollection, tag.Origin)
+	originId, err := idsClient.GetID(idGetter.OriginCollection, tag.Origin)
 	if err != nil {
 		return fmt.Errorf("error getting origin id of tag, %w", err)
 	}
 
-	ag, err := p.aggregates.Get(tag.Time)
+	ag, err := aggregates.Get(tag.Time)
 	if err != nil && !errors.Is(err, db.KeyNotFoundError) {
 		return fmt.Errorf("error getting aggregates, %w", err)
 	}
@@ -83,7 +97,7 @@ func (p aggregatesProcessor) processTagOnce(tag types.UserTag) error {
 		})
 	}
 
-	if err := p.aggregates.Update(tag.Time, ag.Result, ag.Generation); err != nil {
+	if err := aggregates.Update(tag.Time, ag.Result, ag.Generation); err != nil {
 		return fmt.Errorf("error updating aggregates, %w", err)
 	}
 	return nil
