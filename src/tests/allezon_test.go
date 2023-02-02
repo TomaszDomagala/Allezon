@@ -146,7 +146,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			expected: dto.UserProfileDTO{
 				Cookie: cookie,
 				Views:  []dto.UserTagDTO{userTags[0]},
-				Buys:   []dto.UserTagDTO{},
+				Buys:   nil,
 			},
 		},
 	}

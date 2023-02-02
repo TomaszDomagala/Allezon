@@ -55,6 +55,7 @@ func (s server) userProfilesHandler(c *gin.Context) {
 	}
 
 	cookie := c.Param("cookie")
+	s.logger.Debug("parsed", zap.String("cookie", cookie), zap.Time("from", from), zap.Time("to", to))
 
 	resp, err := s.userProfiles(cookie, from, to, limit)
 	if err != nil {
@@ -89,12 +90,14 @@ func (s server) userProfiles(cookie string, from, to time.Time, limit int) (dto.
 	res, err := s.db.UserProfiles().Get(cookie)
 	if err != nil {
 		if errors.Is(err, db.KeyNotFoundError) {
+			s.logger.Debug("key not found", zap.String("cookie", cookie))
 			return dto.UserProfileDTO{
 				Cookie: cookie,
 			}, nil
 		}
 		return dto.UserProfileDTO{}, fmt.Errorf("error getting user profiles from db, %w", err)
 	}
+	s.logger.Debug("got user profiles from db", zap.Any("views", res.Result.Views), zap.Any("buys", res.Result.Buys))
 
 	return dto.UserProfileDTO{
 		Cookie: cookie,
