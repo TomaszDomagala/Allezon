@@ -10,17 +10,6 @@ import (
 	"strings"
 )
 
-//// newDockerClient creates a new docker client.
-//// It uses dockertest.NewPool to create a new docker client, because
-//// it already has some logic to detect the docker host.
-//func newDockerClient() (*docker.Client, error) {
-//	pool, err := dockertest.NewPool("")
-//	if err != nil {
-//		return nil, err
-//	}
-//	return pool.Client, nil
-//}
-
 const (
 	idgetterImageName = "tomaszdomagala/allezon-idgetter"
 	idgetterImageTag  = "latest"
