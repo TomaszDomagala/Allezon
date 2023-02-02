@@ -1,12 +1,14 @@
 package db
 
 import (
+	"errors"
 	"fmt"
+	"time"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/db/pb"
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/aerospike/aerospike-client-go/v6/types"
 	"google.golang.org/protobuf/proto"
-	"time"
 )
 
 //go:generate protoc -I=./ --go_out=./ ./aggregates.proto
@@ -89,10 +91,10 @@ func (a aggregatesClient) Get(minuteStart time.Time) (res GetResult[Aggregates],
 	}
 	r, err := a.cl.Get(nil, key, aggregatesViewsBin, aggregatesBuysBin)
 	if err != nil {
+		if errors.Is(err, as.ErrKeyNotFound) {
+			return res, fmt.Errorf("aggregates for minute %s not found, %w", timeToKey(minuteStart), KeyNotFoundError)
+		}
 		return res, fmt.Errorf("failed to get aggregates, %w", err)
-	}
-	if r == nil {
-		return res, fmt.Errorf("aggregates for minute %s not found, %w", timeToKey(minuteStart), KeyNotFoundError)
 	}
 
 	if views, ok := r.Bins[aggregatesViewsBin].([]byte); ok {

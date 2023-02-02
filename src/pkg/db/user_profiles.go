@@ -2,7 +2,9 @@ package db
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/aerospike/aerospike-client-go/v6/types"
 )
@@ -23,10 +25,10 @@ func (u userProfileClient) Get(cookie string) (res GetResult[UserProfile], err e
 	}
 	r, err := u.cl.Get(nil, key, userProfilesBuysBin, userProfilesViewsBin)
 	if err != nil {
+		if errors.Is(err, as.ErrKeyNotFound) {
+			return res, fmt.Errorf("user profiles for cookie %s not found, %w", cookie, KeyNotFoundError)
+		}
 		return res, fmt.Errorf("failed to get user profiles, %w", err)
-	}
-	if r == nil {
-		return res, fmt.Errorf("user profiles for cookie %s not found, %w", cookie, KeyNotFoundError)
 	}
 
 	if views, ok := r.Bins[userProfilesViewsBin].([]byte); ok {

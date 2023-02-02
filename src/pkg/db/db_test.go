@@ -2,6 +2,12 @@ package db
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"testing"
+	"time"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	as "github.com/aerospike/aerospike-client-go/v6"
@@ -9,10 +15,6 @@ import (
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 func absPath(path string) string {
@@ -105,19 +107,19 @@ func (s *DBSuite) TearDownTest() {
 	s.env = nil
 }
 
-func (s *DBSuite) TestNewModifier() {
-	_, err := NewClientFromAddresses([]string{hostPort})
+func (s *DBSuite) newClient() Client {
+	m, err := NewClientFromAddresses([]string{hostPort})
 	s.Require().NoErrorf(err, "failed to create client")
+	return m
 }
 
-func (s *DBSuite) TestNewGetter() {
-	_, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create getter")
+func (s *DBSuite) TestNewClient() {
+	cl := s.newClient()
+	runtime.KeepAlive(cl)
 }
 
 func (s *DBSuite) Test_UserProfiles() {
-	m, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create client")
+	m := s.newClient()
 
 	up := m.UserProfiles()
 	const cookie = "foobar"
@@ -126,7 +128,7 @@ func (s *DBSuite) Test_UserProfiles() {
 		Buys:  []types.UserTag{{Cookie: "6"}, {Cookie: "9"}},
 	}
 
-	err = up.Update(cookie, t, 0)
+	err := up.Update(cookie, t, 0)
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := up.Get(cookie)
@@ -143,15 +145,23 @@ func (s *DBSuite) Test_UserProfiles() {
 	s.Require().Equal(got.Generation+1, updated.Generation)
 }
 
+func (s *DBSuite) Test_UserProfiles_ReturnsKeyNotFoundErrorOnKeyNotFound() {
+	m := s.newClient()
+
+	up := m.UserProfiles()
+
+	_, err := up.Get("")
+	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
+}
+
 func (s *DBSuite) Test_UserProfiles_Update_ErrorOnGenerationMismatch() {
-	m, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create client")
+	m := s.newClient()
 
 	up := m.UserProfiles()
 	const cookie = "foobar"
 	t := UserProfile{}
 
-	err = up.Update(cookie, t, 0)
+	err := up.Update(cookie, t, 0)
 	s.Require().NoErrorf(err, "failed to create record")
 
 	err = up.Update(cookie, t, 0)
@@ -162,8 +172,7 @@ func (s *DBSuite) Test_UserProfiles_Update_ErrorOnGenerationMismatch() {
 }
 
 func (s *DBSuite) Test_Aggregates() {
-	m, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create client")
+	m := s.newClient()
 
 	a := m.Aggregates()
 	t := Aggregates{
@@ -230,7 +239,7 @@ func (s *DBSuite) Test_Aggregates() {
 	}
 	min := time.Now()
 
-	err = a.Update(min, t, 0)
+	err := a.Update(min, t, 0)
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := a.Get(min)
@@ -250,9 +259,18 @@ func (s *DBSuite) Test_Aggregates() {
 	s.Require().Equal(got.Generation+1, updated.Generation)
 }
 
+func (s *DBSuite) Test_Aggregates_ReturnsKeyNotFoundErrorOnKeyNotFound() {
+	m := s.newClient()
+
+	a := m.Aggregates()
+	min := time.Now()
+
+	_, err := a.Get(min)
+	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
+}
+
 func (s *DBSuite) Test_Aggregates_MinuteRounding() {
-	m, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create client")
+	m := s.newClient()
 
 	a := m.Aggregates()
 	t := Aggregates{
@@ -320,7 +338,7 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 	min := time.Now()
 	min = min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second())))
 
-	err = a.Update(min, t, 0)
+	err := a.Update(min, t, 0)
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := a.Get(min)
@@ -337,14 +355,13 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 }
 
 func (s *DBSuite) Test_Aggregates_Update_ErrorOnGenerationMismatch() {
-	m, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create client")
+	m := s.newClient()
 
 	a := m.Aggregates()
 	min := time.Now()
 	t := Aggregates{}
 
-	err = a.Update(min, t, 0)
+	err := a.Update(min, t, 0)
 	s.Require().NoErrorf(err, "failed to create record")
 
 	err = a.Update(min, t, 0)
