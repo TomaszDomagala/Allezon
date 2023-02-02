@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 )
 
@@ -32,7 +31,7 @@ func runMakeTarget(target string) error {
 	var err error
 
 	cmd := exec.Command("make", target)
-	cmd.Dir, err = srcPath()
+	cmd.Dir, err = findProjectPath()
 	if err != nil {
 		return fmt.Errorf("could not get src path: %w", err)
 	}
@@ -71,14 +70,6 @@ func waitForService(environment *container.Environment, service *container.Servi
 	}
 	environment.Logger.Info("service started", zap.String("service", service.Name))
 	return nil
-}
-
-func srcPath() (string, error) {
-	projectPath, err := findProjectPath()
-	if err != nil {
-		return "", fmt.Errorf("could not get project path: %w", err)
-	}
-	return path.Join(projectPath, "src"), nil
 }
 
 func findProjectPath() (string, error) {
