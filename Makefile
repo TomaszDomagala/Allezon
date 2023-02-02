@@ -43,7 +43,7 @@ PORT_FORWARD_HOST ?= "rtb1"
 
 .PHONY: test
 test: ## Run go tests.
-	go test -v ./...
+	cd $(SRC_DIR) && go test -v ./...
 
 # Docker build targets.
 
