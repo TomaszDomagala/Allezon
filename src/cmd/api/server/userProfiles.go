@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,12 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
-
-type userProfilesResponse struct {
-	Cookie string         `json:"cookie"`
-	Views  []UserTagsJson `json:"views"`
-	Buys   []UserTagsJson `json:"buys"`
-}
 
 const timeRangeMilliPrecisionLayout = "2006-01-02T15:04:05.999"
 
@@ -71,49 +66,32 @@ func (s server) userProfilesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func convertTags(tags []types.UserTag, from, to time.Time, limit int) []UserTagsJson {
+func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.UserTagDTO {
 	toMilli := to.UnixMilli()
 	fromMilli := from.UnixMilli()
 	// Tags we get from DB are sorted in ascending order.
-	var selected []UserTagsJson
+	var selected []dto.UserTagDTO
 	for _, tag := range tags {
 		milli := tag.Time.UnixMilli()
 		if fromMilli <= milli && milli < toMilli {
-			selected = append(selected, convertToJsonTag(tag))
+			selected = append(selected, dto.IntoUserTagDTO(tag))
 		}
 	}
 	return selected
 }
 
-func convertToJsonTag(tag types.UserTag) UserTagsJson {
-	return UserTagsJson{
-		Time:    tag.Time.Format(userTagTimeLayout),
-		Cookie:  tag.Cookie,
-		Country: tag.Country,
-		Device:  tag.Device.String(),
-		Action:  tag.Action.String(),
-		Origin:  tag.Origin,
-		ProductInfo: ProductInfo{
-			ProductId:  tag.ProductInfo.ProductId,
-			BrandId:    tag.ProductInfo.BrandId,
-			CategoryId: tag.ProductInfo.CategoryId,
-			Price:      tag.ProductInfo.Price,
-		},
-	}
-}
-
-func (s server) userProfiles(cookie string, from, to time.Time, limit int) (userProfilesResponse, error) {
+func (s server) userProfiles(cookie string, from, to time.Time, limit int) (dto.UserProfileDTO, error) {
 	res, err := s.db.UserProfiles().Get(cookie)
 	if err != nil {
 		if errors.Is(err, db.KeyNotFoundError) {
-			return userProfilesResponse{
+			return dto.UserProfileDTO{
 				Cookie: cookie,
 			}, nil
 		}
-		return userProfilesResponse{}, fmt.Errorf("error getting user profiles from db, %w", err)
+		return dto.UserProfileDTO{}, fmt.Errorf("error getting user profiles from db, %w", err)
 	}
 
-	return userProfilesResponse{
+	return dto.UserProfileDTO{
 		Cookie: cookie,
 		Views:  convertTags(res.Result.Views, from, to, limit),
 		Buys:   convertTags(res.Result.Buys, from, to, limit),

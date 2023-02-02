@@ -4,3 +4,4 @@
 cluster/credentials
 cluster/artifacts
 *.tgz
+*.log

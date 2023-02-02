@@ -52,7 +52,7 @@ docker-build: docker-build-api docker-build-idgetter docker-build-worker ## Buil
 
 .PHONY: docker-build-api
 docker-build-api: ## Build the API docker image.
-	docker build -t "$(API_DOCKER_REPO):$(API_VERSION)" -f "$(DOCKER_DIR)/$(API_DOCKERFILE)" "$(SRC_DIR)"
+	docker build -t "$(API_DOCKER_REPO):$(API_VERSION)" -t "$(API_DOCKER_REPO):latest" -f "$(DOCKER_DIR)/$(API_DOCKERFILE)" "$(SRC_DIR)"
 
 .PHONY: docker-build-idgetter
 docker-build-idgetter: ## Build the ID Getter docker image.
@@ -60,7 +60,7 @@ docker-build-idgetter: ## Build the ID Getter docker image.
 
 .PHONY: docker-build-worker
 docker-build-worker: ## Build the Worker docker image.
-	docker build -t "$(WORKER_DOCKER_REPO):$(WORKER_VERSION)" -f "$(DOCKER_DIR)/$(WORKER_DOCKERFILE)" "$(SRC_DIR)"
+	docker build -t "$(WORKER_DOCKER_REPO):$(WORKER_VERSION)" -t "$(WORKER_DOCKER_REPO):latest" -f "$(DOCKER_DIR)/$(WORKER_DOCKERFILE)" "$(SRC_DIR)"
 
 .PHONY: docker-push
 docker-push: docker-push-api docker-push-idgetter docker-push-worker ## Push all docker images.
