@@ -13,7 +13,7 @@ import (
 )
 
 // OnServiceCreated is a callback that is called after the service is started.
-type OnServiceCreated func(environment *Environment, resource *dockertest.Resource) error
+type OnServiceCreated func(environment *Environment, service *Service) error
 
 // Service is a docker container that will be started for the test.
 type Service struct {
@@ -23,8 +23,8 @@ type Service struct {
 	// It can be used to wait for the container to be ready, check if the container is healthy, set up, etc.
 	OnServicesCreated OnServiceCreated
 
-	// resource is the resource that is created by the dockertest pool.
-	resource *dockertest.Resource
+	// Resource is the resource that is created by the dockertest pool.
+	Resource *dockertest.Resource
 }
 
 // ExposedHostPort returns first exposed port of the service.
@@ -32,7 +32,7 @@ func (s *Service) ExposedHostPort() string {
 	if len(s.Options.ExposedPorts) == 0 {
 		return ""
 	}
-	return s.resource.GetHostPort(s.Options.ExposedPorts[0])
+	return s.Resource.GetHostPort(s.Options.ExposedPorts[0])
 }
 
 // Environment is a test suite that starts docker containers before the test and stops them after the test.
@@ -126,10 +126,10 @@ func (env *Environment) addService(service *Service) error {
 		return fmt.Errorf("could not start container %s: %w", options.Name, err)
 	}
 	env.resources = append(env.resources, r)
-	service.resource = r
+	service.Resource = r
 
 	if service.OnServicesCreated != nil {
-		err = service.OnServicesCreated(env, r)
+		err = service.OnServicesCreated(env, service)
 		if err != nil {
 			return fmt.Errorf("error running OnServicesCreated function: %w", err)
 		}
