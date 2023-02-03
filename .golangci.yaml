@@ -1,0 +1,17 @@
+linters:
+  enable:
+    # Default linters
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    # Additional linters
+    - goimports
+    - revive
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/TomaszDomagala/Allezon

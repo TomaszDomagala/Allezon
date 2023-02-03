@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/db"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/db"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/config"
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/server"

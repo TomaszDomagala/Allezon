@@ -3,9 +3,10 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"go.uber.org/zap"
-	"time"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"

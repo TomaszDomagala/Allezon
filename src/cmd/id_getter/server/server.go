@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/api"
-	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/config"
-	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/db"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
+
+	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/api"
+	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/config"
+	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/db"
 
 	ginzap "github.com/gin-contrib/zap"
 )

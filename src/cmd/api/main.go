@@ -1,12 +1,14 @@
 package main
 
 import (
-	"github.com/Shopify/sarama"
-	"github.com/TomaszDomagala/Allezon/src/pkg/db"
-	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
-	"go.uber.org/zap"
 	"net/http"
 	"time"
+
+	"github.com/Shopify/sarama"
+	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/db"
+	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/server"

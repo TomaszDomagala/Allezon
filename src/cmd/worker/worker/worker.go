@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"runtime"
 
+	"go.uber.org/zap"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
-	"go.uber.org/zap"
 )
 
 type Worker interface {

@@ -2,8 +2,10 @@ package containerutils
 
 import (
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/container"
+
 	"github.com/ory/dockertest/v3"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 )
 
 var (

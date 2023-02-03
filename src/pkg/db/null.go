@@ -1,8 +1,9 @@
 package db
 
 import (
-	"go.uber.org/zap"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type nullClient struct {

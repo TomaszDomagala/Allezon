@@ -2,12 +2,14 @@ package containerutils
 
 import (
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/container"
-	"go.uber.org/zap"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
+
+	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 )
 
 // BuildApiImage builds api image by running make target.

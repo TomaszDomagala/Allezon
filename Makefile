@@ -45,6 +45,10 @@ PORT_FORWARD_HOST ?= "rtb1"
 test: ## Run go tests.
 	cd $(SRC_DIR) && go test -v ./...
 
+.PHONY: lint
+lint: ## Run golangci-lint.
+	cd $(SRC_DIR) && golangci-lint run
+
 # Docker build targets.
 
 .PHONY: docker-build

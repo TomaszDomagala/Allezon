@@ -3,9 +3,11 @@ package db
 import (
 	"errors"
 	"fmt"
-	adb "github.com/TomaszDomagala/Allezon/src/pkg/db"
+
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/aerospike/aerospike-client-go/v6/types"
+
+	adb "github.com/TomaszDomagala/Allezon/src/pkg/db"
 )
 
 var KeyNotFoundError = errors.New("key not found")

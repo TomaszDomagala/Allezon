@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/api"
 	"net/http"
 	"sync"
+
+	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/api"
 )
 
 const (

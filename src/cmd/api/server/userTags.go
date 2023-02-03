@@ -2,9 +2,11 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
-	"go.uber.org/zap"
 	"net/http"
+
+	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/Shopify/sarama"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 const (

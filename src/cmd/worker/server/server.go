@@ -2,10 +2,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	ginzap "github.com/gin-contrib/zap"
 )
