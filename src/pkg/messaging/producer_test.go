@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/Shopify/sarama"
@@ -115,12 +114,7 @@ func (s *MessagingSuite) SetupSuite() {
 func (s *MessagingSuite) SetupTest() {
 	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{redpandaService}, nil)
 	err := s.env.Run()
-
-	if err != nil {
-		a, e := os.Getwd()
-		fmt.Println(a, e)
-		s.Require().NoErrorf(err, "could not run environment")
-	}
+	s.Require().NoErrorf(err, "could not run environment")
 }
 
 func (s *MessagingSuite) TearDownTest() {
