@@ -1,3 +1,6 @@
+run:
+  timeout: 3m # default GitHub action machines really suck, so we need to increase timeout.
+
 linters:
   enable:
     # Default linters
