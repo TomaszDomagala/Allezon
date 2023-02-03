@@ -125,6 +125,7 @@ func (s *DBSuite) Test_UserProfiles() {
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := up.Get(cookie)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal(t, got.Result)
 	s.Require().Equal(uint32(1), got.Generation)
 
@@ -134,6 +135,7 @@ func (s *DBSuite) Test_UserProfiles() {
 	s.Require().NoErrorf(err, "failed to update record")
 
 	updated, err := up.Get(cookie)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal(got.Result, updated.Result)
 	s.Require().Equal(got.Generation+1, updated.Generation)
 }
@@ -236,6 +238,7 @@ func (s *DBSuite) Test_Aggregates() {
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := a.Get(min)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal(t, got.Result)
 	s.Require().Equal(uint32(1), got.Generation)
 
@@ -248,6 +251,7 @@ func (s *DBSuite) Test_Aggregates() {
 	s.Require().NoErrorf(err, "failed to update record")
 
 	updated, err := a.Get(min)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal(newT, updated.Result)
 	s.Require().Equal(got.Generation+1, updated.Generation)
 }
@@ -335,14 +339,17 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := a.Get(min)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal(t, got.Result)
 	s.Require().Equal(uint32(1), got.Generation)
 
 	got, err = a.Get(min.Add(30 * time.Second))
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal(t, got.Result)
 	s.Require().Equal(uint32(1), got.Generation)
 
 	got, err = a.Get(min.Add(time.Minute - time.Nanosecond))
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal(t, got.Result)
 	s.Require().Equal(uint32(1), got.Generation)
 }

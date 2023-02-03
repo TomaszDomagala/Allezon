@@ -38,5 +38,4 @@ func (s server) userTagsHandler(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
-	return
 }

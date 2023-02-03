@@ -9,10 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
-	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
 )
-
-const redpandaTestTopicPartitionsNumber = 4
 
 var (
 	RedpandaPort           = "29092"
@@ -54,10 +51,6 @@ var (
 			}
 			env.Logger.Info("redpanda started")
 
-			//err = createTestTopic(env, hostport)
-			//if err != nil {
-			//	return fmt.Errorf("failed to create test topic: %w", err)
-			//}
 			return nil
 		},
 	}
@@ -81,26 +74,5 @@ func redpandaHearthCheck(env *container.Environment, address string) error {
 		return fmt.Errorf("failed to get controller: %w", err)
 	}
 
-	return nil
-}
-
-func createTestTopic(env *container.Environment, address string) error {
-	admin, err := sarama.NewClusterAdmin([]string{address}, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer func() {
-		err := admin.Close()
-		if err != nil {
-			env.Logger.Error("failed to close admin", zap.Error(err))
-		}
-	}()
-	err = admin.CreateTopic(messaging.UserTagsTopic, &sarama.TopicDetail{
-		NumPartitions:     redpandaTestTopicPartitionsNumber,
-		ReplicationFactor: 1,
-	}, false)
-	if err != nil {
-		return fmt.Errorf("failed to create topic: %w", err)
-	}
 	return nil
 }

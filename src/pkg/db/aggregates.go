@@ -149,5 +149,5 @@ func (a aggregatesClient) Update(minuteStart time.Time, aggregates Aggregates, g
 }
 
 func (c client) Aggregates() AggregatesClient {
-	return aggregatesClient{cl: c.cl}
+	return aggregatesClient(c)
 }

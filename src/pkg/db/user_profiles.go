@@ -83,5 +83,5 @@ func (u userProfileClient) Update(cookie string, userProfile UserProfile, genera
 }
 
 func (c client) UserProfiles() UserProfileClient {
-	return userProfileClient{cl: c.cl}
+	return userProfileClient(c)
 }

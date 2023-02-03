@@ -119,6 +119,7 @@ func (s *DBSuite) Test_Ids() {
 	s.Require().Equal(1, l, "list length mismatch")
 
 	got, err := c.GetElements(name)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal([]string{t}, got)
 
 	t2 := "bar"
@@ -128,6 +129,7 @@ func (s *DBSuite) Test_Ids() {
 	s.Require().Equal(2, l2, "list length mismatch")
 
 	updated, err := c.GetElements(name)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal([]string{t, t2}, updated)
 }
 
@@ -142,6 +144,7 @@ func (s *DBSuite) Test_Ids_ErrorOnDuplicate() {
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := c.GetElements(name)
+	s.Require().NoErrorf(err, "failed to get record")
 	s.Require().Equal([]string{t}, got)
 
 	t2 := "foo"

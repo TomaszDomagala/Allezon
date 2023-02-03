@@ -50,7 +50,7 @@ func (s server) health(c *gin.Context) {
 }
 
 func (s server) getIDHandler(c *gin.Context) {
-	var req api.GetIdRequest
+	var req api.GetIDRequest
 
 	body, err := c.GetRawData()
 	if err != nil {
@@ -70,8 +70,7 @@ func (s server) getIDHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, api.GetIdResponse{Id: int32(id)})
-	return
+	c.JSON(http.StatusOK, api.GetIdResponse{ID: int32(id)})
 }
 
 // getID returns id of element in category. It tries to find it in cache first, then in database.
@@ -167,7 +166,7 @@ func New(deps Dependencies) Server {
 
 	router.GET("/health", s.health)
 
-	router.POST(api.GetIdUrl, s.getIDHandler)
+	router.POST(api.GetIDUrl, s.getIDHandler)
 
 	return s
 }

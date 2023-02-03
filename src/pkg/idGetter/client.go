@@ -34,7 +34,7 @@ func (c *client) GetID(collectionName string, element string) (int32, error) {
 	if ok {
 		return id, nil
 	}
-	id, err := c.getIdFromServer(collectionName, element)
+	id, err := c.getIDFromServer(collectionName, element)
 	if err != nil {
 		return id, fmt.Errorf("error getting id from the server, %w", err)
 	}
@@ -43,8 +43,8 @@ func (c *client) GetID(collectionName string, element string) (int32, error) {
 	return id, nil
 }
 
-func (c *client) getIdFromServer(collectionName string, element string) (int32, error) {
-	body, err := json.Marshal(api.GetIdRequest{
+func (c *client) getIDFromServer(collectionName string, element string) (int32, error) {
+	body, err := json.Marshal(api.GetIDRequest{
 		CollectionName: collectionName,
 		Element:        element,
 	})
@@ -52,20 +52,20 @@ func (c *client) getIdFromServer(collectionName string, element string) (int32, 
 		return 0, fmt.Errorf("failed to marshall body, %w", err)
 	}
 
-	resp, err := c.httpClient.Post(fmt.Sprintf("http://%s%s", c.addr, api.GetIdUrl), "application/json", bytes.NewReader(body))
+	resp, err := c.httpClient.Post(fmt.Sprintf("http://%s%s", c.addr, api.GetIDUrl), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return 0, fmt.Errorf("failed to make request to ip_getter, %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return 0, fmt.Errorf("ip_getter%s return not OK code %d with status %s", api.GetIdUrl, resp.StatusCode, resp.Status)
+		return 0, fmt.Errorf("ip_getter%s return not OK code %d with status %s", api.GetIDUrl, resp.StatusCode, resp.Status)
 	}
 
 	var res api.GetIdResponse
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return 0, fmt.Errorf("failed to unmarshall body, %w", err)
 	}
-	return res.Id, nil
+	return res.ID, nil
 }
 
 func (c *client) getFromCache(name string, element string) (int32, bool) {

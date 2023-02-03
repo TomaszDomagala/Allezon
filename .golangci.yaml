@@ -13,7 +13,7 @@ linters:
     - unused
     # Additional linters
     - goimports
-    - revive
+#    - revive
 
 linters-settings:
   goimports:

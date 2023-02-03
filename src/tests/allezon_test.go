@@ -40,7 +40,7 @@ func (s *AllezonIntegrationTestSuite) SetupSuite() {
 
 	// Build images before running tests.
 	s.logger.Info("building images")
-	s.Require().NoErrorf(containerutils.BuildApiImage(), "could not build api image")
+	s.Require().NoErrorf(containerutils.BuildAPIImage(), "could not build api image")
 	s.Require().NoErrorf(containerutils.BuildWorkerImage(), "could not build aerospike image")
 	s.Require().NoErrorf(containerutils.BuildIDGetterImage(), "could not build idgetter image")
 	s.logger.Info("finished building images")
@@ -52,7 +52,7 @@ func (s *AllezonIntegrationTestSuite) SetupTest() {
 		containerutils.AerospikeService,
 		containerutils.IDGetterService,
 		containerutils.WorkerService,
-		containerutils.ApiService,
+		containerutils.APIService,
 	}, nil)
 
 	err := s.env.Run()
@@ -115,9 +115,9 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			Country: "PL",
 			Origin:  "https://www.google.com/",
 			ProductInfo: dto.ProductInfo{
-				ProductId:  1337,
-				BrandId:    "adidas",
-				CategoryId: "shoes",
+				ProductID:  1337,
+				BrandID:    "adidas",
+				CategoryID: "shoes",
 				Price:      100,
 			},
 		}
