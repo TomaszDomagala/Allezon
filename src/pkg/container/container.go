@@ -4,13 +4,14 @@ package container
 
 import (
 	"fmt"
+	"math/rand"
+	"strings"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"go.uber.org/zap"
-	"math/rand"
-	"strings"
-	"time"
 )
 
 // OnServiceCreated is a callback that is called after the service is started.

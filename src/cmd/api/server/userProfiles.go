@@ -3,19 +3,18 @@ package server
 import (
 	"errors"
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
-
-const timeRangeMilliPrecisionLayout = "2006-01-02T15:04:05.999"
 
 func parseTimeRange(layout, str string) (time.Time, time.Time, error) {
 	split := strings.Split(str, "_")
@@ -40,7 +39,7 @@ func (s server) userProfilesHandler(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusBadRequest, errors.New("request must contain a time range"))
 		return
 	}
-	from, to, err := parseTimeRange(timeRangeMilliPrecisionLayout, trStr)
+	from, to, err := parseTimeRange(dto.TimeRangeMilliPrecisionLayout, trStr)
 	if err != nil {
 		s.logger.Error("error parsing time range", zap.Error(err))
 		_ = c.AbortWithError(http.StatusBadRequest, err)
@@ -56,6 +55,7 @@ func (s server) userProfilesHandler(c *gin.Context) {
 	}
 
 	cookie := c.Param("cookie")
+	s.logger.Debug("parsed", zap.String("cookie", cookie), zap.Time("from", from), zap.Time("to", to))
 
 	resp, err := s.userProfiles(cookie, from, to, limit)
 	if err != nil {
@@ -67,6 +67,9 @@ func (s server) userProfilesHandler(c *gin.Context) {
 }
 
 func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.UserTagDTO {
+	if limit == 0 {
+		return nil
+	}
 	toMilli := to.UnixMilli()
 	fromMilli := from.UnixMilli()
 	// Tags we get from DB are sorted in ascending order.
@@ -75,6 +78,9 @@ func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.User
 		milli := tag.Time.UnixMilli()
 		if fromMilli <= milli && milli < toMilli {
 			selected = append(selected, dto.IntoUserTagDTO(tag))
+			if len(selected) == limit {
+				break
+			}
 		}
 	}
 	return selected
@@ -84,12 +90,14 @@ func (s server) userProfiles(cookie string, from, to time.Time, limit int) (dto.
 	res, err := s.db.UserProfiles().Get(cookie)
 	if err != nil {
 		if errors.Is(err, db.KeyNotFoundError) {
+			s.logger.Debug("key not found", zap.String("cookie", cookie))
 			return dto.UserProfileDTO{
 				Cookie: cookie,
 			}, nil
 		}
 		return dto.UserProfileDTO{}, fmt.Errorf("error getting user profiles from db, %w", err)
 	}
+	s.logger.Debug("got user profiles from db", zap.Any("views", res.Result.Views), zap.Any("buys", res.Result.Buys))
 
 	return dto.UserProfileDTO{
 		Cookie: cookie,
