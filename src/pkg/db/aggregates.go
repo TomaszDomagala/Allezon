@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/db/pb"
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/aerospike/aerospike-client-go/v6/types"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/db/pb"
 )
 
 //go:generate protoc -I=./ --go_out=./ ./aggregates.proto
@@ -149,5 +150,5 @@ func (a aggregatesClient) Update(minuteStart time.Time, aggregates Aggregates, g
 }
 
 func (c client) Aggregates() AggregatesClient {
-	return aggregatesClient{cl: c.cl}
+	return aggregatesClient(c)
 }

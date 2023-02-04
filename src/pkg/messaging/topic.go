@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"fmt"
+
 	"github.com/Shopify/sarama"
 	"go.uber.org/zap"
 )

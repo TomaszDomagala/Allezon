@@ -2,9 +2,11 @@ package db
 
 import (
 	"errors"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
-	as "github.com/aerospike/aerospike-client-go/v6"
 	"time"
+
+	as "github.com/aerospike/aerospike-client-go/v6"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 // AllezonNamespace is the one and only namespace used by Allezon.

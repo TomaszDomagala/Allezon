@@ -6,11 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/server"
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/worker"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
-	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/config"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"

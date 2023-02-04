@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/Shopify/sarama"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 )

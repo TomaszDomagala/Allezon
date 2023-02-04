@@ -3,10 +3,11 @@ package messaging
 import (
 	"context"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"sort"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )

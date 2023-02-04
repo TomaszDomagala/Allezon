@@ -3,9 +3,10 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"go.uber.org/zap"
-	"time"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
@@ -44,15 +45,15 @@ func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggre
 
 // updateAggregates updates aggregates with the given tag.
 func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient) error {
-	categoryId, err := idsClient.GetID(idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
+	categoryID, err := idsClient.GetID(idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
 	if err != nil {
 		return fmt.Errorf("error getting category id of tag, %w", err)
 	}
-	brandId, err := idsClient.GetID(idGetter.BrandCollection, tag.ProductInfo.BrandId)
+	brandID, err := idsClient.GetID(idGetter.BrandCollection, tag.ProductInfo.BrandId)
 	if err != nil {
 		return fmt.Errorf("error getting brand id of tag, %w", err)
 	}
-	originId, err := idsClient.GetID(idGetter.OriginCollection, tag.Origin)
+	originID, err := idsClient.GetID(idGetter.OriginCollection, tag.Origin)
 	if err != nil {
 		return fmt.Errorf("error getting origin id of tag, %w", err)
 	}
@@ -74,7 +75,7 @@ func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates d
 
 	found := false
 	for i, a := range tA.Sum {
-		if a.BrandId == uint8(brandId) && a.Origin == uint8(originId) && a.CategoryId == uint16(categoryId) {
+		if a.BrandId == uint8(brandID) && a.Origin == uint8(originID) && a.CategoryId == uint16(categoryID) {
 			found = true
 			tA.Sum[i].Data += tag.ProductInfo.Price
 			tA.Count[i].Data++
@@ -83,16 +84,16 @@ func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates d
 
 	if !found {
 		tA.Sum = append(tA.Sum, db.ActionAggregates{
-			CategoryId: uint16(categoryId),
-			BrandId:    uint8(brandId),
-			Origin:     uint8(originId),
+			CategoryId: uint16(categoryID),
+			BrandId:    uint8(brandID),
+			Origin:     uint8(originID),
 			Data:       tag.ProductInfo.Price,
 		})
 
 		tA.Count = append(tA.Count, db.ActionAggregates{
-			CategoryId: uint16(categoryId),
-			BrandId:    uint8(brandId),
-			Origin:     uint8(originId),
+			CategoryId: uint16(categoryID),
+			BrandId:    uint8(brandID),
+			Origin:     uint8(originID),
 			Data:       1,
 		})
 	}

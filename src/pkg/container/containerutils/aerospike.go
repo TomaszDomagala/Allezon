@@ -2,10 +2,12 @@ package containerutils
 
 import (
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/container"
+	"path/filepath"
+
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/ory/dockertest/v3"
-	"path/filepath"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 )
 
 var (
