@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -92,13 +91,7 @@ func (s *DBSuite) SetupSuite() {
 func (s *DBSuite) SetupTest() {
 	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService}, nil)
 	err := s.env.Run()
-	if err != nil {
-		a, e := os.Getwd()
-		fmt.Println(a, e)
-		errClose := s.env.Close()
-		s.Assert().NoErrorf(errClose, "could not close environment after error")
-		s.Require().NoErrorf(err, "could not run environment")
-	}
+	s.Require().NoErrorf(err, "could not run environment")
 }
 
 func (s *DBSuite) TearDownTest() {

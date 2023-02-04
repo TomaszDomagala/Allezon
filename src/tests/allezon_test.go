@@ -57,8 +57,6 @@ func (s *AllezonIntegrationTestSuite) SetupTest() {
 
 	err := s.env.Run()
 	if err != nil {
-		errClose := s.env.Close()
-		s.Assert().NoErrorf(errClose, "could not close environment after error")
 		s.Require().NoErrorf(err, "could not run environment")
 	}
 }

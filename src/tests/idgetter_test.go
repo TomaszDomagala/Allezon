@@ -2,14 +2,15 @@ package tests
 
 import (
 	"fmt"
+	"net/http"
+	"testing"
+	"time"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
-	"net/http"
-	"testing"
-	"time"
 )
 
 type IDGetterIntegrationTestsSuite struct {
@@ -41,8 +42,6 @@ func (s *IDGetterIntegrationTestsSuite) SetupTest() {
 
 	err := s.env.Run()
 	if err != nil {
-		errClose := s.env.Close()
-		s.Assert().NoErrorf(errClose, "could not close environment after error")
 		s.Require().NoErrorf(err, "could not run environment")
 	}
 }
