@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
-	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 )
 
 type IDGetterIntegrationTestsSuite struct {

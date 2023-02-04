@@ -5,12 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 )
 
 func absPath(path string) string {
