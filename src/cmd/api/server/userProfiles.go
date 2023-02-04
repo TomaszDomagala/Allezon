@@ -10,10 +10,11 @@ import (
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/db"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/db"
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 func parseTimeRange(layout, str string) (time.Time, time.Time, error) {

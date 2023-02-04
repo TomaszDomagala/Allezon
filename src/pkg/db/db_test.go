@@ -7,13 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/container"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/container"
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 func absPath(path string) string {
