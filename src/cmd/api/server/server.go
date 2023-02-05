@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/TomaszDomagala/Allezon/src/cmd/api/middleware"
 	"time"
 
 	"github.com/gin-gonic/gin"
