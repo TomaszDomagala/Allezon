@@ -69,12 +69,12 @@ func (s server) userProfilesHandler(c *gin.Context) {
 
 func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.UserTagDTO {
 	if limit == 0 {
-		return nil
+		return []dto.UserTagDTO{}
 	}
 	toMilli := to.UnixMilli()
 	fromMilli := from.UnixMilli()
 	// Tags we get from DB are sorted in ascending order.
-	var selected []dto.UserTagDTO
+	selected := make([]dto.UserTagDTO, 0, limit)
 	for _, tag := range tags {
 		milli := tag.Time.UnixMilli()
 		if fromMilli <= milli && milli < toMilli {

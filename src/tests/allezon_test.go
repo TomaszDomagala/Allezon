@@ -141,11 +141,30 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			from:   now,
 			to:     now.Add(1 * time.Hour),
 			cookie: cookie,
-
 			expected: dto.UserProfileDTO{
 				Cookie: cookie,
 				Views:  []dto.UserTagDTO{userTags[0]},
-				Buys:   nil,
+				Buys:   []dto.UserTagDTO{},
+			},
+		},
+		{
+			from:   now,
+			to:     now.Add(2 * time.Hour),
+			cookie: cookie,
+			expected: dto.UserProfileDTO{
+				Cookie: cookie,
+				Views:  []dto.UserTagDTO{userTags[1], userTags[0]}, // DESC order
+				Buys:   []dto.UserTagDTO{},
+			},
+		},
+		{
+			from:   now,
+			to:     now.Add(2 * time.Hour).Add(1 * time.Millisecond),
+			cookie: cookie,
+			expected: dto.UserProfileDTO{
+				Cookie: cookie,
+				Views:  []dto.UserTagDTO{userTags[2], userTags[1], userTags[0]}, // DESC order
+				Buys:   []dto.UserTagDTO{},
 			},
 		},
 	}
@@ -170,7 +189,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 	s.logger.Info("Waiting for workers to process tags", zap.Duration("time", workersWaitTime))
 	time.Sleep(workersWaitTime)
 
-	for _, profileReq := range profileRequests {
+	for index, profileReq := range profileRequests {
 		params := url.Values{}
 
 		from := profileReq.from.Format(dto.TimeRangeMilliPrecisionLayout)
@@ -195,7 +214,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 
 		var profile dto.UserProfileDTO
 		err = json.NewDecoder(res.Body).Decode(&profile)
-		s.Assert().NoErrorf(err, "could not decode response body")
-		s.Assert().Equalf(profileReq.expected, profile, "unexpected profile")
+		s.Assert().NoErrorf(err, "could not decode response body of profile request %d", index)
+		s.Assert().Equalf(profileReq.expected, profile, "unexpected profile of request %d", index)
 	}
 }

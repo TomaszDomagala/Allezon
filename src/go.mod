@@ -6,8 +6,10 @@ require (
 	github.com/Shopify/sarama v1.37.2
 	github.com/aerospike/aerospike-client-go/v6 v6.8.0
 	github.com/cenkalti/backoff/v4 v4.1.3
+	github.com/davecgh/go-spew v1.1.1
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.8.2
+	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249
 	github.com/ory/dockertest/v3 v3.9.1
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
@@ -22,7 +24,6 @@ require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/cli v20.10.14+incompatible // indirect
 	github.com/docker/docker v20.10.7+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect

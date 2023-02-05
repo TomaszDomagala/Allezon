@@ -7,12 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	ginzap "github.com/gin-contrib/zap"
+
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
+	"github.com/TomaszDomagala/Allezon/src/cmd/api/middleware"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
-
-	ginzap "github.com/gin-contrib/zap"
 )
 
 type Server interface {
@@ -46,6 +47,7 @@ func New(deps Dependencies) Server {
 
 	router.Use(ginzap.Ginzap(deps.Logger, time.RFC3339, true))
 	router.Use(ginzap.RecoveryWithZap(deps.Logger, true))
+	router.Use(middleware.ExpectationValidator(deps.Logger))
 
 	s := server{
 		engine:   router,
