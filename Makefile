@@ -19,21 +19,21 @@ HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
 export DOCKER_BUILDKIT = 1
 
-DOCKER_NAMESPACE ?= "tomaszdomagala"
+DOCKER_NAMESPACE ?= "allezon"
 
 # api service config
 API_VERSION ?= "0.2.0"
-API_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/allezon-api"
+API_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/api"
 API_DOCKERFILE ?= "api.Dockerfile"
 
 # id getter service config
 ID_GETTER_VERSION ?= "0.2.0"
-ID_GETTER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/allezon-idgetter"
+ID_GETTER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/idgetter"
 ID_GETTER_DOCKERFILE ?= "id_getter.Dockerfile"
 
 # worker service config
 WORKER_VERSION ?= "0.2.0"
-WORKER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/allezon-worker"
+WORKER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/worker"
 WORKER_DOCKERFILE ?= "worker.Dockerfile"
 
 PORT_FORWARD_LOCAL_PORT ?= 8080
