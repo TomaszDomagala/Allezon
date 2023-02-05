@@ -144,7 +144,7 @@ local-deploy-update-helm: helm-dependency-update helm-upgrade ## Update and inst
 
 .PHONY: remote-port-forward
 remote-port-forward: ## Forward the local kind cluster port to the remote VM.
-	ssh -R  $(PORT_FORWARD_LOCAL_PORT):localhost:$(PORT_FORWARD_REMOTE_PORT) -N $(PORT_FORWARD_HOST)
+	ssh -R  $(PORT_FORWARD_REMOTE_PORT):localhost:$(PORT_FORWARD_LOCAL_PORT) -N $(PORT_FORWARD_HOST)
 
 # Misc targets.
 
