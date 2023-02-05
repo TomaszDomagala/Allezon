@@ -46,6 +46,7 @@ func New(deps Dependencies) Server {
 
 	router.Use(ginzap.Ginzap(deps.Logger, time.RFC3339, true))
 	router.Use(ginzap.RecoveryWithZap(deps.Logger, true))
+	router.Use(middleware.ExpectationValidator(deps.Logger))
 
 	s := server{
 		engine:   router,
