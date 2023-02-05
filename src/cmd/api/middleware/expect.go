@@ -2,17 +2,14 @@ package middleware
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nsf/jsondiff"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
-
-	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 )
 
 // expectationValidatorEndpoints is a list of endpoints that should be validated.
@@ -38,7 +35,7 @@ func ExpectationValidator(logger *zap.Logger) gin.HandlerFunc {
 		c.Writer = newMultiResponseWriter(c.Writer, &responseCopy)
 
 		// Read the request body and copy it to the requestCopy.
-		c.Request.Body, err = copyRequestBody(c.Request.Body, &requestCopy)
+		c.Request.Body, err = copyRequestBody(c.Request.Body, &requestCopy, logger)
 		if err != nil {
 			logger.Error("error reading request body in a expectation validator", zap.Error(err), zap.String("endpoint", c.FullPath()))
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -47,19 +44,16 @@ func ExpectationValidator(logger *zap.Logger) gin.HandlerFunc {
 
 		c.Next()
 
-		var request, response dto.UserProfileDTO
-		if err = json.Unmarshal(requestCopy.Bytes(), &request); err != nil {
-			logger.Warn("error unmarshalling request body in a expectation validator", zap.Error(err), zap.String("body", requestCopy.String()), zap.String("endpoint", c.FullPath()))
-			return
-		}
-		if err = json.Unmarshal(responseCopy.Bytes(), &response); err != nil {
-			logger.Warn("error unmarshalling response body in a expectation validator", zap.Error(err), zap.String("body", responseCopy.String()), zap.String("endpoint", c.FullPath()))
-			return
+		diff, description := jsondiff.Compare(requestCopy.Bytes(), responseCopy.Bytes(), nil)
+		if diff != jsondiff.FullMatch {
+			logger.Error("response body does not match the expected response body",
+				zap.String("endpoint", c.FullPath()),
+				zap.String("difference", description),
+				zap.String("expected", requestCopy.String()),
+				zap.String("actual", responseCopy.String()),
+			)
 		}
 
-		if !reflect.DeepEqual(request, response) {
-			logger.Warn("request and response are not equal", zap.String("request", requestCopy.String()), zap.String("response", responseCopy.String()), zap.String("endpoint", c.FullPath()))
-		}
 	}
 }
 
@@ -83,9 +77,11 @@ func (w *multiResponseWriter) Write(data []byte) (int, error) {
 }
 
 // copyRequestBody copies the body of a request and returns a new io.ReadCloser with the same content.
-func copyRequestBody(body io.ReadCloser, copy io.Writer) (io.ReadCloser, error) {
+func copyRequestBody(body io.ReadCloser, copy io.Writer, logger *zap.Logger) (io.ReadCloser, error) {
 	defer func() {
-		_ = body.Close()
+		if err := body.Close(); err != nil {
+			logger.Error("error closing request body", zap.Error(err))
+		}
 	}()
 
 	var buf bytes.Buffer
