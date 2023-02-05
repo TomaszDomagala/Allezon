@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-	"golang.org/x/exp/slices"
 	"io"
 	"net/http"
 	"reflect"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"golang.org/x/exp/slices"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 )
 
 // expectationValidatorEndpoints is a list of endpoints that should be validated.

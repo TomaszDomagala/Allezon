@@ -2,18 +2,18 @@ package server
 
 import (
 	"fmt"
-	"github.com/TomaszDomagala/Allezon/src/cmd/api/middleware"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	ginzap "github.com/gin-contrib/zap"
+
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
+	"github.com/TomaszDomagala/Allezon/src/cmd/api/middleware"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
-
-	ginzap "github.com/gin-contrib/zap"
 )
 
 type Server interface {

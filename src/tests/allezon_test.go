@@ -141,11 +141,30 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			from:   now,
 			to:     now.Add(1 * time.Hour),
 			cookie: cookie,
-
 			expected: dto.UserProfileDTO{
 				Cookie: cookie,
-				Views:  []dto.UserTagDTO{userTags[0]},
-				Buys:   nil,
+				Views:  userTags[:1],
+				Buys:   []dto.UserTagDTO{},
+			},
+		},
+		{
+			from:   now,
+			to:     now.Add(2 * time.Hour),
+			cookie: cookie,
+			expected: dto.UserProfileDTO{
+				Cookie: cookie,
+				Views:  userTags[:2],
+				Buys:   []dto.UserTagDTO{},
+			},
+		},
+		{
+			from:   now,
+			to:     now.Add(2 * time.Hour).Add(1 * time.Millisecond),
+			cookie: cookie,
+			expected: dto.UserProfileDTO{
+				Cookie: cookie,
+				Views:  userTags,
+				Buys:   []dto.UserTagDTO{},
 			},
 		},
 	}
