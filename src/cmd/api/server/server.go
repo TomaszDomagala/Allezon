@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-
-	ginzap "github.com/gin-contrib/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/middleware"

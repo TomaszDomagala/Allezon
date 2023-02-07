@@ -99,7 +99,7 @@ func toDevice(s string) (types.Device, error) {
 	}
 }
 
-func toAction(s string) (types.Action, error) {
+func ToAction(s string) (types.Action, error) {
 	switch s {
 	case "VIEW":
 		return types.View, nil
