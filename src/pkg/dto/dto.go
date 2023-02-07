@@ -47,7 +47,7 @@ func FromUserTagDTO(dto UserTagDTO) (types.UserTag, error) {
 	if err != nil {
 		return types.UserTag{}, err
 	}
-	action, err := toAction(dto.Action)
+	action, err := ToAction(dto.Action)
 	if err != nil {
 		return types.UserTag{}, err
 	}

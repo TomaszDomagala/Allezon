@@ -1,11 +1,14 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"github.com/gin-gonic/gin"
 )
@@ -87,27 +90,140 @@ func (s server) convertAggregates(req []string) ([]aggregate, error) {
 }
 
 func (s server) aggregates(aggregates []aggregate, params fetchParams) (aggregatesResponse, error) {
-	res := newAggregatesResponse(aggregates, params)
-	for _, a := range aggregates {
-		actionAggregates, err := s.actionAggregates(a, params)
-		if err != nil {
-			return aggregatesResponse{}, fmt.Errorf("error parsing aggregates of type %s, %w", a, err)
-		}
-		res.appendActionAggregates(a, actionAggregates)
+	f, err := s.newFilters(params.origin, params.brandId, params.categoryId)
+	if err != nil {
+		return aggregatesResponse{}, fmt.Errorf("error creating filters, %w", err)
 	}
-	return res, nil
+	res := newAggregatesResponseBuilder(aggregates, params)
+	for t := params.from; t.Before(params.to); t = t.Add(time.Minute) {
+		aggs, err := s.db.Aggregates().Get(t, params.action)
+		var sum, count uint64
+		if err != nil {
+			if !errors.Is(err, db.KeyNotFoundError) {
+				return aggregatesResponse{}, fmt.Errorf("error getting aggregates for time %s, %w", t, err)
+			}
+		} else {
+			sum, count = s.filterAggregates(aggs, f)
+		}
+		res.appendAggregates(t, sum, count)
+	}
+
+	return res.toResponse(), nil
 }
 
-func newAggregatesResponse(aggregates []aggregate, params fetchParams) (res aggregatesResponse) {
-	res.Columns = []string{"1m_bucket"}
+func (s server) filterAggregates(aggs []db.ActionAggregates, f filters) (sum uint64, count uint64) {
+	for _, agg := range aggs {
+		if f.match(agg.Key) {
+			sum += agg.Sum
+			count += uint64(agg.Count)
+		}
+	}
+	return
 }
 
-func (r aggregatesResponse) appendActionAggregates(a aggregate, aggregates interface{}) {
+type aggregatesResponseBuilder struct {
+	columns []string
+	rows    [][]string
 
+	aggs   []aggregate
+	params fetchParams
 }
 
-func (s server) actionAggregates(a aggregate, params fetchParams) (interface{}, interface{}) {
+func (b *aggregatesResponseBuilder) toResponse() aggregatesResponse {
+	return aggregatesResponse{
+		Columns: b.columns,
+		Rows:    b.rows,
+	}
+}
 
+func (b *aggregatesResponseBuilder) appendAggregates(t time.Time, s uint64, c uint64) {
+	row := make([]string, 0, len(b.columns))
+	row = append(row, t.Format(dto.TimeRangeSecPrecisionLayout), b.params.action.String())
+	if b.params.origin != nil {
+		row = append(row, *b.params.origin)
+	}
+	if b.params.brandId != nil {
+		row = append(row, *b.params.origin)
+	}
+	if b.params.categoryId != nil {
+		row = append(row, *b.params.origin)
+	}
+	for _, a := range b.aggs {
+		switch a {
+		case count:
+			row = append(row, fmt.Sprint(c))
+		case sum:
+			row = append(row, fmt.Sprint(s))
+		}
+	}
+	b.rows = append(b.rows, row)
+}
+
+func newAggregatesResponseBuilder(aggregates []aggregate, params fetchParams) (res aggregatesResponseBuilder) {
+	res.columns = []string{"1m_bucket", "action"}
+	if params.origin != nil {
+		res.columns = append(res.columns, "origin")
+	}
+	if params.brandId != nil {
+		res.columns = append(res.columns, "brand_id")
+	}
+	if params.categoryId != nil {
+		res.columns = append(res.columns, "category_id")
+	}
+	for _, a := range aggregates {
+		res.columns = append(res.columns, a.String())
+	}
+
+	res.aggs = aggregates
+	res.params = params
+
+	return res
+}
+
+func (s server) newFilters(origin, brandId, categoryId *string) (f filters, err error) {
+	f.originId, err = s.getId(idGetter.OriginCollection, origin)
+	if err != nil {
+		return filters{}, err
+	}
+	f.categoryId, err = s.getId(idGetter.CategoryCollection, categoryId)
+	if err != nil {
+		return filters{}, err
+	}
+	f.brandId, err = s.getId(idGetter.BrandCollection, brandId)
+	if err != nil {
+		return filters{}, err
+	}
+	return f, nil
+}
+
+func (s server) getId(collection string, elementPtr *string) (*uint16, error) {
+	if elementPtr == nil {
+		return nil, nil
+	}
+	id, err := idGetter.GetU16ID(s.idGetter, collection, *elementPtr)
+	if err != nil {
+		return nil, fmt.Errorf("error getting %s id of filter, %w", collection, err)
+	}
+	return &id, nil
+}
+
+type filters struct {
+	originId   *uint16
+	brandId    *uint16
+	categoryId *uint16
+}
+
+func (f filters) match(key db.AggregateKey) bool {
+	return checkFilter(f.originId, key.Origin) &&
+		checkFilter(f.brandId, key.BrandId) &&
+		checkFilter(f.categoryId, key.CategoryId)
+}
+
+func checkFilter(f *uint16, k uint16) bool {
+	if f == nil {
+		return true
+	}
+	return *f == k
 }
 
 type fetchParams struct {

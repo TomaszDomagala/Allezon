@@ -44,15 +44,11 @@ func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggre
 }
 
 func getId(idsClient idGetter.Client, collection string, element string) (uint16, error) {
-	id, err := idsClient.GetID(collection, element)
+	id, err := idGetter.GetU16ID(idsClient, collection, element)
 	if err != nil {
 		return 0, fmt.Errorf("error getting %s id of tag, %w", collection, err)
 	}
-	idRes := uint16(id)
-	if int32(idRes) != id {
-		return 0, fmt.Errorf("if of element %s in collection %s not in range %d", element, collection, id)
-	}
-	return idRes, nil
+	return id, nil
 }
 
 // updateAggregates updates aggregates with the given tag.
