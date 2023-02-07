@@ -2,7 +2,6 @@ package worker
 
 import (
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -14,12 +13,13 @@ import (
 )
 
 // aggregatesBackoff is a backoff strategy used to update aggregates.
+// aggregates only fail if db is down hence larger backoff.
 var aggregatesBackoff = backoff.ExponentialBackOff{
-	InitialInterval:     10 * time.Millisecond,
+	InitialInterval:     1 * time.Second,
 	RandomizationFactor: backoff.DefaultRandomizationFactor,
 	Multiplier:          backoff.DefaultMultiplier,
-	MaxInterval:         500 * time.Second,
-	MaxElapsedTime:      10 * time.Second,
+	MaxInterval:         300 * time.Second,
+	MaxElapsedTime:      30 * time.Second,
 	Stop:                backoff.Stop,
 	Clock:               backoff.SystemClock,
 }
@@ -43,29 +43,32 @@ func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggre
 	return nil
 }
 
+func getId(idsClient idGetter.Client, collection string, element string) (uint16, error) {
+	id, err := idsClient.GetID(collection, element)
+	if err != nil {
+		return 0, fmt.Errorf("error getting %s id of tag, %w", collection, err)
+	}
+	idRes := uint16(id)
+	if int32(idRes) != id {
+		return 0, fmt.Errorf("if of element %s in collection %s not in range %d, %w", element, collection, id)
+	}
+	return idRes, nil
+}
+
 // updateAggregates updates aggregates with the given tag.
-func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient) error {
-	categoryID, err := idsClient.GetID(idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
+func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient) (err error) {
+	var key db.AggregateKey
+	key.CategoryId, err = getId(idsClient, idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
 	if err != nil {
-		return fmt.Errorf("error getting category id of tag, %w", err)
+		return err
 	}
-	if categoryID > math.MaxUint16 {
-
-	}
-
-	brandID, err := idsClient.GetID(idGetter.BrandCollection, tag.ProductInfo.BrandId)
+	key.BrandId, err = getId(idsClient, idGetter.BrandCollection, tag.ProductInfo.BrandId)
 	if err != nil {
-		return fmt.Errorf("error getting brand id of tag, %w", err)
+		return err
 	}
-	originID, err := idsClient.GetID(idGetter.OriginCollection, tag.Origin)
+	key.Origin, err = getId(idsClient, idGetter.OriginCollection, tag.Origin)
 	if err != nil {
-		return fmt.Errorf("error getting origin id of tag, %w", err)
-	}
-
-	key := db.AggregateKey{
-		CategoryId: uint16(categoryID),
-		BrandId:    uint16(brandID),
-		Origin:     uint16(originID),
+		return err
 	}
 
 	if err := aggregates.Add(key, tag); err != nil {
