@@ -15,16 +15,11 @@ import (
 
 type aggregatesRequest struct {
 	TimeRange  string   `form:"time_range" binding:"required"`
-	Action     string   `form:"action" binding:"required"`
+	Action     string   `form:"action" binding:"required,oneof=BUY VIEW"`
 	Aggregates []string `form:"aggregates" binding:"required"`
 	Origin     *string  `form:"origin" binding:"-"`
 	BrandId    *string  `form:"brand_id" binding:"-"`
 	CategoryId *string  `form:"category_id" binding:"-"`
-}
-
-type aggregatesResponse struct {
-	Columns []string   `json:"columns"`
-	Rows    [][]string `json:"rows"`
 }
 
 func (s server) aggregatesHandler(c *gin.Context) {
@@ -48,6 +43,11 @@ func (s server) aggregatesHandler(c *gin.Context) {
 		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
+	if err := validateAggregatesTimeRange(from, to); err != nil {
+		err = fmt.Errorf("error validating time range %s-%s, %w", from, to, err)
+		_ = c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
 
 	resp, err := s.aggregates(
 		aggregates,
@@ -66,6 +66,22 @@ func (s server) aggregatesHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+func validateAggregatesTimeRange(from, to time.Time) error {
+	if from.After(to) {
+		return fmt.Errorf("from is before to")
+	}
+	if to.Sub(from) > 10*time.Minute {
+		return fmt.Errorf("timerange is larger than 10 minutes")
+	}
+	if from.Second() > 0 {
+		return fmt.Errorf("from is not second aligned")
+	}
+	if to.Second() > 0 {
+		return fmt.Errorf("to is not second aligned")
+	}
+	return nil
 }
 
 func (s server) convertAggregates(req []string) ([]aggregate, error) {
@@ -89,10 +105,10 @@ func (s server) convertAggregates(req []string) ([]aggregate, error) {
 	return aggregates, nil
 }
 
-func (s server) aggregates(aggregates []aggregate, params fetchParams) (aggregatesResponse, error) {
+func (s server) aggregates(aggregates []aggregate, params fetchParams) (dto.AggregatesDTO, error) {
 	f, err := s.newFilters(params.origin, params.brandId, params.categoryId)
 	if err != nil {
-		return aggregatesResponse{}, fmt.Errorf("error creating filters, %w", err)
+		return dto.AggregatesDTO{}, fmt.Errorf("error creating filters, %w", err)
 	}
 	res := newAggregatesResponseBuilder(aggregates, params)
 	for t := params.from; t.Before(params.to); t = t.Add(time.Minute) {
@@ -100,7 +116,7 @@ func (s server) aggregates(aggregates []aggregate, params fetchParams) (aggregat
 		var sum, count uint64
 		if err != nil {
 			if !errors.Is(err, db.KeyNotFoundError) {
-				return aggregatesResponse{}, fmt.Errorf("error getting aggregates for time %s, %w", t, err)
+				return dto.AggregatesDTO{}, fmt.Errorf("error getting aggregates for time %s, %w", t, err)
 			}
 		} else {
 			sum, count = s.filterAggregates(aggs, f)
@@ -129,8 +145,8 @@ type aggregatesResponseBuilder struct {
 	params fetchParams
 }
 
-func (b *aggregatesResponseBuilder) toResponse() aggregatesResponse {
-	return aggregatesResponse{
+func (b *aggregatesResponseBuilder) toResponse() dto.AggregatesDTO {
+	return dto.AggregatesDTO{
 		Columns: b.columns,
 		Rows:    b.rows,
 	}

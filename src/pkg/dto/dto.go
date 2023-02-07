@@ -37,6 +37,11 @@ type UserProfileDTO struct {
 	Buys   []UserTagDTO `json:"buys"`
 }
 
+type AggregatesDTO struct {
+	Columns []string   `json:"columns"`
+	Rows    [][]string `json:"rows"`
+}
+
 // FromUserTagDTO converts UserTagDTO to types.UserTag.
 func FromUserTagDTO(dto UserTagDTO) (types.UserTag, error) {
 	t, err := time.Parse(UserTagTimeLayout, dto.Time)
