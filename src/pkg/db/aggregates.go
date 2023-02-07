@@ -54,42 +54,34 @@ func decodeSumAndCount(v uint64) (sum uint64, count uint16) {
 	return
 }
 
-func (a aggregatesClient) Get(t time.Time) (res Aggregates, err error) {
+func (a aggregatesClient) Get(t time.Time, action types.Action) ([]ActionAggregates, error) {
+	var err error
 	key, err := as.NewKey(AllezonNamespace, aggregatesSet, timeToKey(t))
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 	r, err := a.cl.Get(nil, key, aggregatesViewsBin, aggregatesBuysBin)
 	if err != nil {
 		if errors.Is(err, as.ErrKeyNotFound) {
-			return res, fmt.Errorf("aggregates for minute %s not found, %w", timeToKey(t), KeyNotFoundError)
+			return nil, fmt.Errorf("aggregates for minute %s not found, %w", timeToKey(t), KeyNotFoundError)
 		}
-		return res, fmt.Errorf("failed to get aggregates, %w", err)
+		return nil, fmt.Errorf("failed to get aggregates, %w", err)
 	}
 
-	if vI, ok := r.Bins[aggregatesViewsBin]; ok {
-		if views, ok := vI.([]as.MapPair); ok {
-			res.Views, err = unmarshallActionAggregates(views)
-			if err != nil {
-				return res, fmt.Errorf("couldn't unmarshall views, %w", err)
-			}
-		} else {
-			return res, fmt.Errorf("views have wrong type: %T", r.Bins[aggregatesViewsBin])
-		}
+	binName := a.actionToBin(action)
+	raw, ok := r.Bins[binName]
+	if !ok {
+		return nil, nil
 	}
-
-	if bI, ok := r.Bins[aggregatesBuysBin]; ok {
-		if buys, ok := bI.([]as.MapPair); ok {
-			res.Buys, err = unmarshallActionAggregates(buys)
-			if err != nil {
-				return res, fmt.Errorf("couldn't unmarshall buys, %w", err)
-			}
-		} else {
-			return res, fmt.Errorf("buys have wrong type: %T", r.Bins[aggregatesBuysBin])
-		}
+	pairs, ok := raw.([]as.MapPair)
+	if !ok {
+		return nil, fmt.Errorf("%s have wrong type: %T", action, raw)
 	}
-
-	return
+	res, err := unmarshallActionAggregates(pairs)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't unmarshall %ss, %w", action, err)
+	}
+	return res, nil
 }
 
 func unmarshallActionAggregates(kvs []as.MapPair) ([]ActionAggregates, error) {

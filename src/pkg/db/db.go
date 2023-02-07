@@ -46,13 +46,8 @@ type ActionAggregates struct {
 	Count uint16
 }
 
-type Aggregates struct {
-	Views []ActionAggregates
-	Buys  []ActionAggregates
-}
-
 type AggregatesClient interface {
-	Get(time time.Time) (Aggregates, error)
+	Get(time time.Time, action types.Action) ([]ActionAggregates, error)
 	Add(key AggregateKey, tag types.UserTag) error
 }
 

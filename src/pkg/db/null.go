@@ -29,9 +29,9 @@ type nullAggregatesClient struct {
 	logger *zap.Logger
 }
 
-func (n *nullAggregatesClient) Get(time time.Time) (Aggregates, error) {
-	n.logger.Debug("null aggregates client invoked", zap.String("method", "Get"), zap.Time("time", time))
-	return Aggregates{}, nil
+func (n *nullAggregatesClient) Get(time time.Time, action types.Action) ([]ActionAggregates, error) {
+	n.logger.Debug("null aggregates client invoked", zap.String("method", "Get"), zap.Time("time", time), zap.String("action", action.String()))
+	return nil, nil
 }
 
 func (n *nullAggregatesClient) Add(key AggregateKey, tag types.UserTag) error {

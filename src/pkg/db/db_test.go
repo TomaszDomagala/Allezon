@@ -174,14 +174,28 @@ func sortActionAggregates(agg []ActionAggregates) {
 	})
 }
 
-func (s *DBSuite) compareAggregates(expected, actual Aggregates) {
-	sortActionAggregates(expected.Views)
-	sortActionAggregates(expected.Buys)
+type aggregates struct {
+	views []ActionAggregates
+	buys  []ActionAggregates
+}
 
-	sortActionAggregates(actual.Views)
-	sortActionAggregates(actual.Buys)
+func (s *DBSuite) compareAggregates(expected, actual aggregates) {
+	sortActionAggregates(expected.views)
+	sortActionAggregates(expected.buys)
+
+	sortActionAggregates(actual.views)
+	sortActionAggregates(actual.buys)
 
 	s.Require().Equal(expected, actual, "aggregates not equal")
+}
+
+func (s *DBSuite) getAggregates(a AggregatesClient, t time.Time) (agg aggregates) {
+	var err error
+	agg.views, err = a.Get(t, types.View)
+	s.Require().NoErrorf(err, "error getting from the database")
+	agg.buys, err = a.Get(t, types.Buy)
+	s.Require().NoErrorf(err, "error getting from the database")
+	return
 }
 
 func (s *DBSuite) Test_Aggregates() {
@@ -199,8 +213,8 @@ func (s *DBSuite) Test_Aggregates() {
 		Origin:     30,
 	}
 
-	t := Aggregates{
-		Views: []ActionAggregates{
+	t := aggregates{
+		views: []ActionAggregates{
 			{
 				Key:   k1,
 				Sum:   42,
@@ -212,7 +226,7 @@ func (s *DBSuite) Test_Aggregates() {
 				Count: 3,
 			},
 		},
-		Buys: []ActionAggregates{
+		buys: []ActionAggregates{
 			{
 				Key:   k1,
 				Sum:   69,
@@ -251,8 +265,7 @@ func (s *DBSuite) Test_Aggregates() {
 	err = a.Add(k1, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 23}})
 	s.Require().NoErrorf(err, "error inserting to the database")
 
-	res, err := a.Get(min)
-	s.Require().NoErrorf(err, "error getting from the database")
+	res := s.getAggregates(a, min)
 	s.compareAggregates(t, res)
 }
 
@@ -262,7 +275,9 @@ func (s *DBSuite) Test_Aggregates_ReturnsKeyNotFoundErrorOnKeyNotFound() {
 	a := m.Aggregates()
 	min := time.Now()
 
-	_, err := a.Get(min)
+	_, err := a.Get(min, types.View)
+	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
+	_, err = a.Get(min, types.Buy)
 	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
 }
 
@@ -281,15 +296,15 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 		Origin:     30,
 	}
 
-	t := Aggregates{
-		Views: []ActionAggregates{
+	t := aggregates{
+		views: []ActionAggregates{
 			{
 				Key:   k1,
 				Sum:   6,
 				Count: 1,
 			},
 		},
-		Buys: []ActionAggregates{
+		buys: []ActionAggregates{
 			{
 				Key:   k2,
 				Sum:   9,
@@ -308,20 +323,21 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 	err = a.Add(k2, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 9}})
 	s.Require().NoErrorf(err, "error inserting to the database")
 
-	res, err := a.Get(min)
-	s.Require().NoErrorf(err, "error getting from the database")
+	res := s.getAggregates(a, min)
 	s.compareAggregates(t, res)
 
-	res, err = a.Get(min.Add(30 * time.Second))
-	s.Require().NoErrorf(err, "error getting from the database")
+	res = s.getAggregates(a, min.Add(30*time.Second))
 	s.compareAggregates(t, res)
 
-	res, err = a.Get(min.Add(time.Minute - time.Nanosecond))
-	s.Require().NoErrorf(err, "error getting from the database")
+	res = s.getAggregates(a, min.Add(time.Minute-time.Nanosecond))
 	s.compareAggregates(t, res)
 
-	_, err = a.Get(min.Add(-time.Nanosecond))
+	_, err = a.Get(min.Add(-time.Nanosecond), types.View)
 	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
-	_, err = a.Get(min.Add(time.Minute))
+	_, err = a.Get(min.Add(-time.Nanosecond), types.Buy)
+	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
+	_, err = a.Get(min.Add(time.Minute), types.View)
+	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
+	_, err = a.Get(min.Add(time.Minute), types.Buy)
 	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
 }
