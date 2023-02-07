@@ -14,7 +14,7 @@ require (
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
-	golang.org/x/exp v0.0.0-20230118134722-a68e582fa157
+	golang.org/x/exp v0.0.0-20230206171751-46f607a40771
 	golang.org/x/sync v0.1.0
 )
 

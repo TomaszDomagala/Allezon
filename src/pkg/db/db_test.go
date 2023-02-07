@@ -170,7 +170,7 @@ func (s *DBSuite) Test_UserProfiles_Update_ErrorOnGenerationMismatch() {
 
 func sortActionAggregates(agg []ActionAggregates) {
 	sort.Slice(agg, func(i, j int) bool {
-		return agg[i].Key.encode() < agg[i].Key.encode()
+		return agg[i].Key.encode() < agg[j].Key.encode()
 	})
 }
 

@@ -125,18 +125,6 @@ func (a aggregatesClient) actionToBin(action types.Action) string {
 	}
 }
 
-func (a aggregatesClient) binToAction(bin string) types.Action {
-	switch bin {
-	case aggregatesBuysBin:
-		return types.Buy
-	case aggregatesViewsBin:
-		return types.View
-	default:
-		a.l.Fatal("unexpected bin", zap.String("bin", bin))
-		panic(nil)
-	}
-}
-
 func (a aggregatesClient) Add(aKey AggregateKey, tag types.UserTag) error {
 	name := timeToKey(tag.Time)
 	key, ae := as.NewKey(AllezonNamespace, aggregatesSet, name)

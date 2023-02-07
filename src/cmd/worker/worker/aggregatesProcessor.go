@@ -50,7 +50,7 @@ func getId(idsClient idGetter.Client, collection string, element string) (uint16
 	}
 	idRes := uint16(id)
 	if int32(idRes) != id {
-		return 0, fmt.Errorf("if of element %s in collection %s not in range %d, %w", element, collection, id)
+		return 0, fmt.Errorf("if of element %s in collection %s not in range %d", element, collection, id)
 	}
 	return idRes, nil
 }
