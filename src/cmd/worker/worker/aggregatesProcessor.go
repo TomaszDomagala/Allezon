@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -49,6 +49,10 @@ func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates d
 	if err != nil {
 		return fmt.Errorf("error getting category id of tag, %w", err)
 	}
+	if categoryID > math.MaxUint16 {
+
+	}
+
 	brandID, err := idsClient.GetID(idGetter.BrandCollection, tag.ProductInfo.BrandId)
 	if err != nil {
 		return fmt.Errorf("error getting brand id of tag, %w", err)
@@ -58,47 +62,13 @@ func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates d
 		return fmt.Errorf("error getting origin id of tag, %w", err)
 	}
 
-	ag, err := aggregates.Get(tag.Time)
-	if err != nil && !errors.Is(err, db.KeyNotFoundError) {
-		return fmt.Errorf("error getting aggregates, %w", err)
+	key := db.AggregateKey{
+		CategoryId: uint16(categoryID),
+		BrandId:    uint16(brandID),
+		Origin:     uint16(originID),
 	}
 
-	var tA *db.TypeAggregates
-	switch tag.Action {
-	case types.Buy:
-		tA = &ag.Result.Buys
-	case types.View:
-		tA = &ag.Result.Views
-	default:
-		return fmt.Errorf("unknown action, %d", tag.Action)
-	}
-
-	found := false
-	for i, a := range tA.Sum {
-		if a.BrandId == uint8(brandID) && a.Origin == uint8(originID) && a.CategoryId == uint16(categoryID) {
-			found = true
-			tA.Sum[i].Data += tag.ProductInfo.Price
-			tA.Count[i].Data++
-		}
-	}
-
-	if !found {
-		tA.Sum = append(tA.Sum, db.ActionAggregates{
-			CategoryId: uint16(categoryID),
-			BrandId:    uint8(brandID),
-			Origin:     uint8(originID),
-			Data:       tag.ProductInfo.Price,
-		})
-
-		tA.Count = append(tA.Count, db.ActionAggregates{
-			CategoryId: uint16(categoryID),
-			BrandId:    uint8(brandID),
-			Origin:     uint8(originID),
-			Data:       1,
-		})
-	}
-
-	if err := aggregates.Update(tag.Time, ag.Result, ag.Generation); err != nil {
+	if err := aggregates.Add(key, tag); err != nil {
 		return fmt.Errorf("error updating aggregates, %w", err)
 	}
 	return nil
