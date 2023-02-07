@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +15,36 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
+
+type userProfilesRequest struct {
+	TimeRange string `form:"time_range" binding:"required"`
+	Limit     int    `form:"limit,default=200" binding:"required,gte=0,lte=200"`
+}
+
+func (s server) userProfilesHandler(c *gin.Context) {
+	var req userProfilesRequest
+	if err := c.BindQuery(&req); err != nil {
+		_ = c.AbortWithError(http.StatusBadRequest, errors.New("request must contain a time range"))
+		return
+	}
+	from, to, err := parseTimeRange(dto.TimeRangeMilliPrecisionLayout, req.TimeRange)
+	if err != nil {
+		s.logger.Error("error parsing time range", zap.Error(err))
+		_ = c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	cookie := c.Param("cookie")
+	s.logger.Debug("parsed", zap.String("cookie", cookie), zap.Time("from", from), zap.Time("to", to))
+
+	resp, err := s.userProfiles(cookie, from, to, req.Limit)
+	if err != nil {
+		s.logger.Error("error handling user profiles", zap.Error(err))
+		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
 
 func parseTimeRange(layout, str string) (time.Time, time.Time, error) {
 	split := strings.Split(str, "_")
@@ -31,40 +60,6 @@ func parseTimeRange(layout, str string) (time.Time, time.Time, error) {
 		return time.Time{}, time.Time{}, fmt.Errorf("error parsing to part '%s' of time range '%s', %w", split[1], str, err)
 	}
 	return from, to, nil
-}
-
-func (s server) userProfilesHandler(c *gin.Context) {
-	trStr, ok := c.GetQuery("time_range")
-	if !ok {
-		s.logger.Error("request without time range")
-		_ = c.AbortWithError(http.StatusBadRequest, errors.New("request must contain a time range"))
-		return
-	}
-	from, to, err := parseTimeRange(dto.TimeRangeMilliPrecisionLayout, trStr)
-	if err != nil {
-		s.logger.Error("error parsing time range", zap.Error(err))
-		_ = c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	limitStr := c.DefaultQuery("limit", "200")
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		s.logger.Error("can't convert limit to int request: %s", zap.Error(err), zap.String("limit", limitStr))
-		_ = c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	cookie := c.Param("cookie")
-	s.logger.Debug("parsed", zap.String("cookie", cookie), zap.Time("from", from), zap.Time("to", to))
-
-	resp, err := s.userProfiles(cookie, from, to, limit)
-	if err != nil {
-		s.logger.Error("error handling user profiles", zap.Error(err))
-		_ = c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-	c.JSON(http.StatusOK, resp)
 }
 
 func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.UserTagDTO {
