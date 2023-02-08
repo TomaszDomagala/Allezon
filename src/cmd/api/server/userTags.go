@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -13,14 +12,7 @@ import (
 
 func (s server) userTagsHandler(c *gin.Context) {
 	var req dto.UserTagDTO
-
-	body, err := c.GetRawData()
-	if err != nil {
-		_ = c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	if err := json.Unmarshal(body, &req); err != nil {
-		s.logger.Error("can't unmarshal request: %s", zap.Error(err), zap.ByteString("body", body))
+	if err := c.BindJSON(&req); err != nil {
 		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -28,6 +20,10 @@ func (s server) userTagsHandler(c *gin.Context) {
 
 	userTag, err := dto.FromUserTagDTO(req)
 	if err != nil {
+		body, err := c.GetRawData()
+		if err != nil {
+			s.logger.Error("can't get request body", zap.Error(err))
+		}
 		s.logger.Error("can't convert request to user tag: %s", zap.Error(err), zap.ByteString("body", body))
 		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return

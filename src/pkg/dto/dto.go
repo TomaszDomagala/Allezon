@@ -13,21 +13,21 @@ const TimeRangeSecPrecisionLayout = "2006-01-02T15:04:05"
 
 // UserTagDTO is a data transfer object for types.UserTag.
 type UserTagDTO struct {
-	Time        string      `json:"time"`
-	Cookie      string      `json:"cookie"`
-	Country     string      `json:"country"`
-	Device      string      `json:"device"`
-	Action      string      `json:"action"`
-	Origin      string      `json:"origin"`
-	ProductInfo ProductInfo `json:"product_info"`
+	Time        string      `json:"time" binding:"required"`
+	Cookie      string      `json:"cookie" binding:"required"`
+	Country     string      `json:"country" binding:"required"`
+	Device      string      `json:"device" binding:"required,oneof=PC TV MOBILE"`
+	Action      string      `json:"action" binding:"required,oneof=VIEW BUY"`
+	Origin      string      `json:"origin" binding:"required"`
+	ProductInfo ProductInfo `json:"product_info" binding:"required"`
 }
 
 // ProductInfo is a data transfer object for types.ProductInfo.
 type ProductInfo struct {
-	ProductID  int    `json:"product_id"`
-	BrandID    string `json:"brand_id"`
-	CategoryID string `json:"category_id"`
-	Price      uint32 `json:"price"`
+	ProductID  int    `json:"product_id" binding:"required"`
+	BrandID    string `json:"brand_id" binding:"required"`
+	CategoryID string `json:"category_id" binding:"required"`
+	Price      uint32 `json:"price" binding:"required"`
 }
 
 // UserProfileDTO is a data transfer object for user profile.
