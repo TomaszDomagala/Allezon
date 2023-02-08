@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -21,6 +20,7 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 type AllezonIntegrationTestSuite struct {
