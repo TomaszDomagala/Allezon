@@ -159,10 +159,10 @@ func (b *aggregatesResponseBuilder) appendAggregates(t time.Time, sum uint64, co
 		row = append(row, *b.params.origin)
 	}
 	if b.params.brandId != nil {
-		row = append(row, *b.params.origin)
+		row = append(row, *b.params.brandId)
 	}
 	if b.params.categoryId != nil {
-		row = append(row, *b.params.origin)
+		row = append(row, *b.params.categoryId)
 	}
 	for _, a := range b.aggs {
 		switch a {
