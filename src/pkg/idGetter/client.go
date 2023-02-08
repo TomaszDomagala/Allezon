@@ -16,6 +16,18 @@ const (
 	CategoryCollection = "category"
 )
 
+func GetU16ID(cl Client, collection string, element string) (uint16, error) {
+	id, err := cl.GetID(collection, element)
+	if err != nil {
+		return 0, err
+	}
+	idRes := uint16(id)
+	if int32(idRes) != id {
+		return 0, fmt.Errorf("if of element %s in collection %s not in range %d", element, collection, id)
+	}
+	return idRes, nil
+}
+
 type Client interface {
 	GetID(collection string, element string) (id int32, err error)
 }

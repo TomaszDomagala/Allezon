@@ -26,16 +26,22 @@ var aggregatesBackoff = backoff.ExponentialBackOff{
 
 func runAggregatesProcessor(tagsChan <-chan types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, logger *zap.Logger) {
 	for tag := range tagsChan {
-		if err := updateAggregatesBackoff(tag, idsClient, aggregates, aggregatesBackoff); err != nil {
+		logger.Debug("[A] processing tag", zap.Any("tag", tag))
+		if err := updateAggregatesBackoff(tag, idsClient, aggregates, aggregatesBackoff, logger); err != nil {
 			logger.Error("error updating aggregates", zap.Error(err))
 		}
+		logger.Debug("[A] processed tag", zap.Any("tag", tag))
 	}
 }
 
 // updateAggregatesBackoff updates aggregates with the given tag and retries on error according to the given backoff strategy.
-func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, bo backoff.ExponentialBackOff) error {
+func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, bo backoff.ExponentialBackOff, logger *zap.Logger) error {
 	err := backoff.Retry(func() error {
-		return updateAggregates(tag, idsClient, aggregates)
+		if err := updateAggregates(tag, idsClient, aggregates); err != nil {
+			logger.Debug("[A] error processing tag", zap.Any("tag", tag), zap.Error(err))
+			return err
+		}
+		return nil
 	}, &bo)
 	if err != nil {
 		return fmt.Errorf("error backoff updating aggregates, %w", err)
@@ -44,15 +50,11 @@ func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggre
 }
 
 func getId(idsClient idGetter.Client, collection string, element string) (uint16, error) {
-	id, err := idsClient.GetID(collection, element)
+	id, err := idGetter.GetU16ID(idsClient, collection, element)
 	if err != nil {
 		return 0, fmt.Errorf("error getting %s id of tag, %w", collection, err)
 	}
-	idRes := uint16(id)
-	if int32(idRes) != id {
-		return 0, fmt.Errorf("if of element %s in collection %s not in range %d", element, collection, id)
-	}
-	return idRes, nil
+	return id, nil
 }
 
 // updateAggregates updates aggregates with the given tag.

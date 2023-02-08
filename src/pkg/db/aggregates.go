@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/davecgh/go-spew/spew"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 const (

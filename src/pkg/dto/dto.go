@@ -37,6 +37,11 @@ type UserProfileDTO struct {
 	Buys   []UserTagDTO `json:"buys"`
 }
 
+type AggregatesDTO struct {
+	Columns []string   `json:"columns"`
+	Rows    [][]string `json:"rows"`
+}
+
 // FromUserTagDTO converts UserTagDTO to types.UserTag.
 func FromUserTagDTO(dto UserTagDTO) (types.UserTag, error) {
 	t, err := time.Parse(UserTagTimeLayout, dto.Time)
@@ -47,7 +52,7 @@ func FromUserTagDTO(dto UserTagDTO) (types.UserTag, error) {
 	if err != nil {
 		return types.UserTag{}, err
 	}
-	action, err := toAction(dto.Action)
+	action, err := ToAction(dto.Action)
 	if err != nil {
 		return types.UserTag{}, err
 	}
@@ -99,7 +104,7 @@ func toDevice(s string) (types.Device, error) {
 	}
 }
 
-func toAction(s string) (types.Action, error) {
+func ToAction(s string) (types.Action, error) {
 	switch s {
 	case "VIEW":
 		return types.View, nil
@@ -107,5 +112,16 @@ func toAction(s string) (types.Action, error) {
 		return types.Buy, nil
 	default:
 		return 0, fmt.Errorf("can't convert to action: %s", s)
+	}
+}
+
+func ToAggregate(s string) (types.Aggregate, error) {
+	switch s {
+	case "count":
+		return types.Count, nil
+	case "sum_price":
+		return types.Sum, nil
+	default:
+		return "", fmt.Errorf("can't convert to aggregate: %s", s)
 	}
 }

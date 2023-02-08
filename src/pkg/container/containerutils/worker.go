@@ -29,6 +29,7 @@ var (
 				fmt.Sprintf("PORT=%s", WorkerPort),
 				fmt.Sprintf("KAFKA_ADDRESSES=redpanda:%s", RedpandaPort),
 				fmt.Sprintf("DB_ADDRESSES=aerospike:%s", AerospikePort),
+				fmt.Sprintf("ID_GETTER_ADDRESS=idgetter:%s", IDGetterPort),
 			},
 		},
 		OnServicesCreated: waitForService,

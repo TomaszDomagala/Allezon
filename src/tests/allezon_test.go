@@ -20,6 +20,7 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
 	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 type AllezonIntegrationTestSuite struct {
@@ -100,6 +101,10 @@ func (s *AllezonIntegrationTestSuite) TearDownTest() {
 	s.env = nil
 }
 
+func minuteAlign(min time.Time) time.Time {
+	return min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second()))) // Round to exactly a minute.
+}
+
 func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 	now, err := time.Parse(time.RFC3339, "2021-01-01T00:00:00Z")
 	s.Require().NoErrorf(err, "could not parse time")
@@ -169,6 +174,31 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 		},
 	}
 
+	maNow := minuteAlign(now)
+	aggregatesRequests := []struct {
+		from, to   time.Time
+		aggregates []types.Aggregate
+		action     types.Action
+		origin     *string
+		categoryId *string
+		brandId    *string
+
+		expected dto.AggregatesDTO
+	}{
+		{
+			from:       maNow,
+			to:         maNow.Add(1 * time.Minute),
+			action:     types.View,
+			aggregates: []types.Aggregate{types.Sum, types.Count},
+			expected: dto.AggregatesDTO{
+				Columns: []string{"1m_bucket", "action", string(types.Sum), string(types.Count)},
+				Rows: [][]string{
+					{maNow.Format(dto.TimeRangeSecPrecisionLayout), "VIEW", "100", "1"},
+				},
+			},
+		},
+	}
+
 	client := http.Client{Timeout: 5 * time.Second}
 
 	hostport := s.env.GetService("api").ExposedHostPort()
@@ -215,6 +245,46 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 		var profile dto.UserProfileDTO
 		err = json.NewDecoder(res.Body).Decode(&profile)
 		s.Assert().NoErrorf(err, "could not decode response body of profile request %d", index)
-		s.Assert().Equalf(profileReq.expected, profile, "unexpected profile of request %d", index)
+		s.Assert().Equalf(profileReq.expected, profile, "profile request mismatch %d", index)
+	}
+
+	for index, aggReq := range aggregatesRequests {
+		params := url.Values{}
+
+		from := aggReq.from.Format(dto.TimeRangeSecPrecisionLayout)
+		to := aggReq.to.Format(dto.TimeRangeSecPrecisionLayout)
+		params.Add("time_range", fmt.Sprintf("%s_%s", from, to))
+
+		params.Add("action", aggReq.action.String())
+		for _, a := range aggReq.aggregates {
+			params.Add("aggregates", string(a))
+		}
+
+		if aggReq.origin != nil {
+			params.Add("origin", *aggReq.origin)
+		}
+		if aggReq.categoryId != nil {
+			params.Add("category_id", *aggReq.categoryId)
+		}
+		if aggReq.brandId != nil {
+			params.Add("brand_id", *aggReq.brandId)
+		}
+
+		reqUrl := address + "/aggregates/?" + params.Encode()
+		req, err := http.NewRequest(http.MethodPost, reqUrl, nil)
+		s.Require().NoErrorf(err, "could not create request")
+
+		res, err := client.Do(req)
+		s.Assert().NoErrorf(err, "could not send request")
+		if res.StatusCode != http.StatusOK {
+			body, err := io.ReadAll(res.Body)
+			s.Assert().Equalf(http.StatusOK, res.StatusCode, `unexpected status code, status: %s, body "%s".\nRequest Params: %s.`, res.Status, body, spew.Sprintln(params), params.Encode())
+			s.Assert().NoErrorf(err, "error file reading request body")
+		}
+
+		var aggr dto.AggregatesDTO
+		err = json.NewDecoder(res.Body).Decode(&aggr)
+		s.Assert().NoErrorf(err, "could not decode response body of profile request %d", index)
+		s.Assert().Equalf(aggReq.expected, aggr, "aggregates response mismatch %d", index)
 	}
 }

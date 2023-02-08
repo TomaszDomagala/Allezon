@@ -28,18 +28,18 @@ var userProfileBackoff = backoff.ExponentialBackOff{
 
 func runUpdateUserProfileProcessor(tagsChan <-chan types.UserTag, userProfiles db.UserProfileClient, logger *zap.Logger) {
 	for tag := range tagsChan {
-		logger.Debug("processing tag", zap.Any("tag", tag))
+		logger.Debug("[UP] processing tag", zap.Any("tag", tag))
 		if err := updateUserProfileBackoff(tag, userProfiles, userProfileBackoff, logger); err != nil {
 			logger.Error("error updating user profile", zap.Error(err))
 		}
-		logger.Debug("processed tag", zap.Any("tag", tag))
+		logger.Debug("[UP] processed tag", zap.Any("tag", tag))
 	}
 }
 
 func updateUserProfileBackoff(tag types.UserTag, userProfiles db.UserProfileClient, bo backoff.ExponentialBackOff, logger *zap.Logger) error {
 	err := backoff.Retry(func() error {
-		if err := updateUserProfile(tag, userProfiles, logger); err != nil {
-			logger.Debug("error processing tag", zap.Any("tag", tag), zap.Error(err))
+		if err := updateUserProfile(tag, userProfiles); err != nil {
+			logger.Debug("[UP] error processing tag", zap.Any("tag", tag), zap.Error(err))
 			return err
 		}
 		return nil
@@ -50,7 +50,7 @@ func updateUserProfileBackoff(tag types.UserTag, userProfiles db.UserProfileClie
 	return nil
 }
 
-func updateUserProfile(tag types.UserTag, userProfiles db.UserProfileClient, logger *zap.Logger) error {
+func updateUserProfile(tag types.UserTag, userProfiles db.UserProfileClient) error {
 	up, err := userProfiles.Get(tag.Cookie)
 	if err != nil && !errors.Is(err, db.KeyNotFoundError) {
 		return fmt.Errorf("error getting tag, %w", err)
