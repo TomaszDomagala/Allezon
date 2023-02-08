@@ -23,6 +23,13 @@ func (d Device) String() string {
 	}
 }
 
+type Aggregate string
+
+const (
+	Sum   Aggregate = "sum_price"
+	Count Aggregate = "count"
+)
+
 type Action int8
 
 const (

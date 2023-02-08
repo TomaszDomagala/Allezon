@@ -84,17 +84,17 @@ func validateAggregatesTimeRange(from, to time.Time) error {
 	return nil
 }
 
-func (s server) convertAggregates(req []string) ([]aggregate, error) {
+func (s server) convertAggregates(req []string) ([]types.Aggregate, error) {
 	var err error
-	aggregates := make([]aggregate, len(req))
+	aggregates := make([]types.Aggregate, len(req))
 	for i, a := range req {
-		aggregates[i], err = toAggregate(a)
+		aggregates[i], err = dto.ToAggregate(a)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	agg := make(map[aggregate]struct{}, len(aggregates))
+	agg := make(map[types.Aggregate]struct{}, len(aggregates))
 	for _, a := range aggregates {
 		agg[a] = struct{}{}
 	}
@@ -105,7 +105,7 @@ func (s server) convertAggregates(req []string) ([]aggregate, error) {
 	return aggregates, nil
 }
 
-func (s server) aggregates(aggregates []aggregate, params fetchParams) (dto.AggregatesDTO, error) {
+func (s server) aggregates(aggregates []types.Aggregate, params fetchParams) (dto.AggregatesDTO, error) {
 	f, err := s.newFilters(params.origin, params.brandId, params.categoryId)
 	if err != nil {
 		return dto.AggregatesDTO{}, fmt.Errorf("error creating filters, %w", err)
@@ -141,7 +141,7 @@ type aggregatesResponseBuilder struct {
 	columns []string
 	rows    [][]string
 
-	aggs   []aggregate
+	aggs   []types.Aggregate
 	params fetchParams
 }
 
@@ -152,7 +152,7 @@ func (b *aggregatesResponseBuilder) toResponse() dto.AggregatesDTO {
 	}
 }
 
-func (b *aggregatesResponseBuilder) appendAggregates(t time.Time, s uint64, c uint64) {
+func (b *aggregatesResponseBuilder) appendAggregates(t time.Time, sum uint64, count uint64) {
 	row := make([]string, 0, len(b.columns))
 	row = append(row, t.Format(dto.TimeRangeSecPrecisionLayout), b.params.action.String())
 	if b.params.origin != nil {
@@ -166,16 +166,16 @@ func (b *aggregatesResponseBuilder) appendAggregates(t time.Time, s uint64, c ui
 	}
 	for _, a := range b.aggs {
 		switch a {
-		case count:
-			row = append(row, fmt.Sprint(c))
-		case sum:
-			row = append(row, fmt.Sprint(s))
+		case types.Count:
+			row = append(row, fmt.Sprint(count))
+		case types.Sum:
+			row = append(row, fmt.Sprint(sum))
 		}
 	}
 	b.rows = append(b.rows, row)
 }
 
-func newAggregatesResponseBuilder(aggregates []aggregate, params fetchParams) (res aggregatesResponseBuilder) {
+func newAggregatesResponseBuilder(aggregates []types.Aggregate, params fetchParams) (res aggregatesResponseBuilder) {
 	res.columns = []string{"1m_bucket", "action"}
 	if params.origin != nil {
 		res.columns = append(res.columns, "origin")
@@ -187,7 +187,7 @@ func newAggregatesResponseBuilder(aggregates []aggregate, params fetchParams) (r
 		res.columns = append(res.columns, "category_id")
 	}
 	for _, a := range aggregates {
-		res.columns = append(res.columns, a.String())
+		res.columns = append(res.columns, string(a))
 	}
 
 	res.aggs = aggregates
@@ -250,33 +250,4 @@ type fetchParams struct {
 	origin     *string
 	brandId    *string
 	categoryId *string
-}
-
-type aggregate uint8
-
-const (
-	sum aggregate = iota
-	count
-)
-
-func (a aggregate) String() string {
-	switch a {
-	case count:
-		return "count"
-	case sum:
-		return "sum_price"
-	default:
-		return "unknown"
-	}
-}
-
-func toAggregate(s string) (aggregate, error) {
-	switch s {
-	case "count":
-		return count, nil
-	case "sum_price":
-		return sum, nil
-	default:
-		return 0, fmt.Errorf("can't convert to aggregate: %s", s)
-	}
 }

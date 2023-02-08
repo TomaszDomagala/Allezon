@@ -101,13 +101,6 @@ func (s *AllezonIntegrationTestSuite) TearDownTest() {
 	s.env = nil
 }
 
-type aggregateType string
-
-const (
-	aggregateSum   aggregateType = "sum_price"
-	aggregateCount aggregateType = "count"
-)
-
 func minuteAlign(min time.Time) time.Time {
 	return min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second()))) // Round to exactly a minute.
 }
@@ -184,7 +177,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 	maNow := minuteAlign(now)
 	aggregatesRequests := []struct {
 		from, to   time.Time
-		aggregates []aggregateType
+		aggregates []types.Aggregate
 		action     types.Action
 		origin     *string
 		categoryId *string
@@ -196,9 +189,9 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			from:       maNow,
 			to:         maNow.Add(1 * time.Minute),
 			action:     types.View,
-			aggregates: []aggregateType{aggregateSum, aggregateCount},
+			aggregates: []types.Aggregate{types.Sum, types.Count},
 			expected: dto.AggregatesDTO{
-				Columns: []string{"1m_bucket", "action", string(aggregateSum), string(aggregateCount)},
+				Columns: []string{"1m_bucket", "action", string(types.Sum), string(types.Count)},
 				Rows: [][]string{
 					{maNow.Format(dto.TimeRangeSecPrecisionLayout), "VIEW", "100", "1"},
 				},
