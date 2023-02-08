@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,14 +17,14 @@ import (
 )
 
 func main() {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
 	conf, err := config.New()
 	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
+		panic(fmt.Errorf("failed to load config: %w", err))
+	}
+
+	logger, err := loggerConfig(conf).Build()
+	if err != nil {
+		panic(err)
 	}
 
 	logger.Info("Initializing messaging", zap.Strings("addresses", conf.KafkaAddresses))
@@ -79,4 +80,26 @@ func main() {
 	if err := srv.Run(); err != nil {
 		logger.Fatal("Error while running a server", zap.Error(err))
 	}
+}
+
+// loggerConfig returns a logger configuration based on the application configuration.
+func loggerConfig(conf *config.Config) zap.Config {
+	loggerConf := zap.NewProductionConfig()
+
+	if conf.LoggerJSON {
+		loggerConf.Encoding = "json"
+	} else {
+		loggerConf.Encoding = "console"
+	}
+	if conf.LoggerDebugLevel {
+		loggerConf.Level.SetLevel(zap.DebugLevel)
+	} else {
+		loggerConf.Level.SetLevel(zap.InfoLevel)
+	}
+	loggerConf.Development = conf.LoggerDevelopment
+
+	// Disable sampling to log all messages.
+	// TODO: find out how sampling works and if it's useful.
+	loggerConf.Sampling = nil
+	return loggerConf
 }

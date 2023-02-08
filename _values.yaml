@@ -1,0 +1,22 @@
+eck-elasticsearch:
+  enabled: true
+  annotations:
+    eck.k8s.elastic.co/license: basic
+
+eck-kibana:
+  enabled: true
+  annotations:
+    eck.k8s.elastic.co/license: basic
+
+eck-beats:
+  enabled: true
+  spec:
+    type: filebeat
+  daemonSet:
+    podTemplate:
+      spec:
+        securityContext:
+          runAsUser: 0
+          privileged: true
+  annotations:
+      eck.k8s.elastic.co/license: basic

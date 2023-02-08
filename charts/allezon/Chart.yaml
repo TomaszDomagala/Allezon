@@ -66,6 +66,27 @@ dependencies:
   - name: aerospike
     version: 5.5.0
     repository: https://aerospike.github.io/aerospike-kubernetes
+#
+#    #    ELK stack
+#  - name: elasticsearch
+#    version: 8.5.1
+#    repository: https://helm.elastic.co
+#
+#  - name: kibana
+#    version: 8.5.1
+#    repository: https://helm.elastic.co
+#
+#  - name: filebeat
+#    version: 8.5.1
+#    repository: https://helm.elastic.co
+#
+#  - name: metricbeat # Don't know if we need this.
+#    version: 8.5.1
+#    repository: https://helm.elastic.co
+#
+#  - name: logstash
+#    version: 8.5.1
+#    repository: https://helm.elastic.co
 
     #  - name: ingress-nginx
     #    version: 4.4.2
