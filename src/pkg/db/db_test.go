@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"testing"
 	"time"
 
@@ -102,7 +103,7 @@ func (s *DBSuite) TearDownTest() {
 }
 
 func (s *DBSuite) newClient() Client {
-	m, err := NewClientFromAddresses([]string{hostPort})
+	m, err := NewClientFromAddresses(s.logger, hostPort)
 	s.Require().NoErrorf(err, "failed to create client")
 	return m
 }
@@ -167,94 +168,105 @@ func (s *DBSuite) Test_UserProfiles_Update_ErrorOnGenerationMismatch() {
 	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
 }
 
+func sortActionAggregates(agg []ActionAggregates) {
+	sort.Slice(agg, func(i, j int) bool {
+		return agg[i].Key.encode() < agg[j].Key.encode()
+	})
+}
+
+type aggregates struct {
+	views []ActionAggregates
+	buys  []ActionAggregates
+}
+
+func (s *DBSuite) compareAggregates(expected, actual aggregates) {
+	sortActionAggregates(expected.views)
+	sortActionAggregates(expected.buys)
+
+	sortActionAggregates(actual.views)
+	sortActionAggregates(actual.buys)
+
+	s.Require().Equal(expected, actual, "aggregates not equal")
+}
+
+func (s *DBSuite) getAggregates(a AggregatesClient, t time.Time) (agg aggregates) {
+	var err error
+	agg.views, err = a.Get(t, types.View)
+	s.Require().NoErrorf(err, "error getting from the database")
+	agg.buys, err = a.Get(t, types.Buy)
+	s.Require().NoErrorf(err, "error getting from the database")
+	return
+}
+
 func (s *DBSuite) Test_Aggregates() {
 	m := s.newClient()
-
 	a := m.Aggregates()
-	t := Aggregates{
-		Views: TypeAggregates{
-			Sum: []ActionAggregates{
-				{
-					CategoryId: 1,
-					BrandId:    2,
-					Origin:     3,
-					Data:       4,
-				},
-				{
-					CategoryId: 5,
-					BrandId:    4,
-					Origin:     3,
-					Data:       2,
-				},
+
+	k1 := AggregateKey{
+		CategoryId: 1,
+		BrandId:    2,
+		Origin:     3,
+	}
+	k2 := AggregateKey{
+		CategoryId: 10,
+		BrandId:    20,
+		Origin:     30,
+	}
+
+	t := aggregates{
+		views: []ActionAggregates{
+			{
+				Key:   k1,
+				Sum:   42,
+				Count: 2,
 			},
-			Count: []ActionAggregates{
-				{
-					CategoryId: 10,
-					BrandId:    20,
-					Origin:     30,
-					Data:       40,
-				},
-				{
-					CategoryId: 50,
-					BrandId:    40,
-					Origin:     30,
-					Data:       20,
-				},
+			{
+				Key:   k2,
+				Sum:   69,
+				Count: 3,
 			},
 		},
-		Buys: TypeAggregates{
-			Sum: []ActionAggregates{
-				{
-					CategoryId: 11,
-					BrandId:    12,
-					Origin:     13,
-					Data:       14,
-				},
-				{
-					CategoryId: 25,
-					BrandId:    24,
-					Origin:     23,
-					Data:       22,
-				},
+		buys: []ActionAggregates{
+			{
+				Key:   k1,
+				Sum:   69,
+				Count: 3,
 			},
-			Count: []ActionAggregates{
-				{
-					CategoryId: 110,
-					BrandId:    120,
-					Origin:     130,
-					Data:       140,
-				},
-				{
-					CategoryId: 150,
-					BrandId:    140,
-					Origin:     130,
-					Data:       120,
-				},
+			{
+				Key:   k2,
+				Sum:   42,
+				Count: 2,
 			},
 		},
 	}
 	min := time.Now()
 
-	err := a.Update(min, t, 0)
-	s.Require().NoErrorf(err, "failed to create record")
+	// Add views.
+	err := a.Add(k1, types.UserTag{Action: types.View, Time: min, ProductInfo: types.ProductInfo{Price: 21}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k1, types.UserTag{Action: types.View, Time: min, ProductInfo: types.ProductInfo{Price: 21}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k2, types.UserTag{Action: types.View, Time: min, ProductInfo: types.ProductInfo{Price: 23}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k2, types.UserTag{Action: types.View, Time: min, ProductInfo: types.ProductInfo{Price: 23}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k2, types.UserTag{Action: types.View, Time: min, ProductInfo: types.ProductInfo{Price: 23}})
+	s.Require().NoErrorf(err, "error inserting to the database")
 
-	got, err := a.Get(min)
-	s.Require().NoErrorf(err, "failed to get record")
-	s.Require().Equal(t, got.Result)
-	s.Require().Equal(uint32(1), got.Generation)
+	// Add buys.
+	err = a.Add(k2, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 21}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k2, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 21}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k1, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 23}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k1, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 23}})
+	s.Require().NoErrorf(err, "error inserting to the database")
+	err = a.Add(k1, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 23}})
+	s.Require().NoErrorf(err, "error inserting to the database")
 
-	newT := Aggregates{
-		Views: t.Buys,
-		Buys:  t.Views,
-	}
-
-	err = a.Update(min, newT, got.Generation)
-	s.Require().NoErrorf(err, "failed to update record")
-
-	updated, err := a.Get(min)
-	s.Require().NoErrorf(err, "failed to get record")
-	s.Require().Equal(newT, updated.Result)
-	s.Require().Equal(got.Generation+1, updated.Generation)
+	res := s.getAggregates(a, min)
+	s.compareAggregates(t, res)
 }
 
 func (s *DBSuite) Test_Aggregates_ReturnsKeyNotFoundErrorOnKeyNotFound() {
@@ -263,111 +275,69 @@ func (s *DBSuite) Test_Aggregates_ReturnsKeyNotFoundErrorOnKeyNotFound() {
 	a := m.Aggregates()
 	min := time.Now()
 
-	_, err := a.Get(min)
+	_, err := a.Get(min, types.View)
+	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
+	_, err = a.Get(min, types.Buy)
 	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
 }
 
 func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 	m := s.newClient()
-
 	a := m.Aggregates()
-	t := Aggregates{
-		Views: TypeAggregates{
-			Sum: []ActionAggregates{
-				{
-					CategoryId: 1,
-					BrandId:    2,
-					Origin:     3,
-					Data:       4,
-				},
-				{
-					CategoryId: 5,
-					BrandId:    4,
-					Origin:     3,
-					Data:       2,
-				},
-			},
-			Count: []ActionAggregates{
-				{
-					CategoryId: 10,
-					BrandId:    20,
-					Origin:     30,
-					Data:       40,
-				},
-				{
-					CategoryId: 50,
-					BrandId:    40,
-					Origin:     30,
-					Data:       20,
-				},
+
+	k1 := AggregateKey{
+		CategoryId: 1,
+		BrandId:    2,
+		Origin:     3,
+	}
+	k2 := AggregateKey{
+		CategoryId: 10,
+		BrandId:    20,
+		Origin:     30,
+	}
+
+	t := aggregates{
+		views: []ActionAggregates{
+			{
+				Key:   k1,
+				Sum:   6,
+				Count: 1,
 			},
 		},
-		Buys: TypeAggregates{
-			Sum: []ActionAggregates{
-				{
-					CategoryId: 11,
-					BrandId:    12,
-					Origin:     13,
-					Data:       14,
-				},
-				{
-					CategoryId: 25,
-					BrandId:    24,
-					Origin:     23,
-					Data:       22,
-				},
-			},
-			Count: []ActionAggregates{
-				{
-					CategoryId: 110,
-					BrandId:    120,
-					Origin:     130,
-					Data:       140,
-				},
-				{
-					CategoryId: 150,
-					BrandId:    140,
-					Origin:     130,
-					Data:       120,
-				},
+		buys: []ActionAggregates{
+			{
+				Key:   k2,
+				Sum:   9,
+				Count: 1,
 			},
 		},
 	}
 	min := time.Now()
-	min = min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second())))
+	min = min.Add(-(time.Duration(min.Nanosecond()) + time.Second*time.Duration(min.Second()))) // Round to exactly a minute.
 
-	err := a.Update(min, t, 0)
-	s.Require().NoErrorf(err, "failed to create record")
+	// Add views.
+	err := a.Add(k1, types.UserTag{Action: types.View, Time: min, ProductInfo: types.ProductInfo{Price: 6}})
+	s.Require().NoErrorf(err, "error inserting to the database")
 
-	got, err := a.Get(min)
-	s.Require().NoErrorf(err, "failed to get record")
-	s.Require().Equal(t, got.Result)
-	s.Require().Equal(uint32(1), got.Generation)
+	// Add buys.
+	err = a.Add(k2, types.UserTag{Action: types.Buy, Time: min, ProductInfo: types.ProductInfo{Price: 9}})
+	s.Require().NoErrorf(err, "error inserting to the database")
 
-	got, err = a.Get(min.Add(30 * time.Second))
-	s.Require().NoErrorf(err, "failed to get record")
-	s.Require().Equal(t, got.Result)
-	s.Require().Equal(uint32(1), got.Generation)
+	res := s.getAggregates(a, min)
+	s.compareAggregates(t, res)
 
-	got, err = a.Get(min.Add(time.Minute - time.Nanosecond))
-	s.Require().NoErrorf(err, "failed to get record")
-	s.Require().Equal(t, got.Result)
-	s.Require().Equal(uint32(1), got.Generation)
-}
+	res = s.getAggregates(a, min.Add(30*time.Second))
+	s.compareAggregates(t, res)
 
-func (s *DBSuite) Test_Aggregates_Update_ErrorOnGenerationMismatch() {
-	m := s.newClient()
+	res = s.getAggregates(a, min.Add(time.Minute-time.Nanosecond))
+	s.compareAggregates(t, res)
 
-	a := m.Aggregates()
-	min := time.Now()
-	t := Aggregates{}
-
-	err := a.Update(min, t, 0)
-	s.Require().NoErrorf(err, "failed to create record")
-
-	err = a.Update(min, t, 0)
-	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
-
-	err = a.Update(min, t, 2)
-	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
+	_, err = a.Get(min.Add(-time.Nanosecond), types.View)
+	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
+	_, err = a.Get(min.Add(-time.Nanosecond), types.Buy)
+	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
+	_, err = a.Get(min.Add(time.Minute), types.View)
+	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
+	_, err = a.Get(min.Add(time.Minute), types.Buy)
+	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
 }

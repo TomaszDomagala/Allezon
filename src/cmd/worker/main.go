@@ -34,7 +34,7 @@ func main() {
 		logger.Fatal("Error while creating producer", zap.Error(err))
 	}
 
-	client, err := db.NewClientFromAddresses(conf.DBAddresses)
+	client, err := db.NewClientFromAddresses(logger, conf.DBAddresses...)
 	if err != nil {
 		logger.Fatal("Error while creating database client", zap.Error(err))
 	}

@@ -53,7 +53,7 @@ func main() {
 		dbClient = db.NewNullClient(logger)
 	} else {
 		logger.Info("Using aerospike database client, addresses: ", zap.Strings("addresses", conf.DBAddresses))
-		dbClient, err = db.NewClientFromAddresses(conf.DBAddresses)
+		dbClient, err = db.NewClientFromAddresses(logger, conf.DBAddresses...)
 		if err != nil {
 			logger.Fatal("Error while creating database client", zap.Error(err))
 		}

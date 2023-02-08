@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -14,12 +13,13 @@ import (
 )
 
 // aggregatesBackoff is a backoff strategy used to update aggregates.
+// aggregates only fail if db is down hence larger backoff.
 var aggregatesBackoff = backoff.ExponentialBackOff{
-	InitialInterval:     10 * time.Millisecond,
+	InitialInterval:     1 * time.Second,
 	RandomizationFactor: backoff.DefaultRandomizationFactor,
 	Multiplier:          backoff.DefaultMultiplier,
-	MaxInterval:         500 * time.Second,
-	MaxElapsedTime:      10 * time.Second,
+	MaxInterval:         300 * time.Second,
+	MaxElapsedTime:      30 * time.Second,
 	Stop:                backoff.Stop,
 	Clock:               backoff.SystemClock,
 }
@@ -43,62 +43,35 @@ func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggre
 	return nil
 }
 
+func getId(idsClient idGetter.Client, collection string, element string) (uint16, error) {
+	id, err := idsClient.GetID(collection, element)
+	if err != nil {
+		return 0, fmt.Errorf("error getting %s id of tag, %w", collection, err)
+	}
+	idRes := uint16(id)
+	if int32(idRes) != id {
+		return 0, fmt.Errorf("if of element %s in collection %s not in range %d", element, collection, id)
+	}
+	return idRes, nil
+}
+
 // updateAggregates updates aggregates with the given tag.
-func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient) error {
-	categoryID, err := idsClient.GetID(idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
+func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient) (err error) {
+	var key db.AggregateKey
+	key.CategoryId, err = getId(idsClient, idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
 	if err != nil {
-		return fmt.Errorf("error getting category id of tag, %w", err)
+		return err
 	}
-	brandID, err := idsClient.GetID(idGetter.BrandCollection, tag.ProductInfo.BrandId)
+	key.BrandId, err = getId(idsClient, idGetter.BrandCollection, tag.ProductInfo.BrandId)
 	if err != nil {
-		return fmt.Errorf("error getting brand id of tag, %w", err)
+		return err
 	}
-	originID, err := idsClient.GetID(idGetter.OriginCollection, tag.Origin)
+	key.Origin, err = getId(idsClient, idGetter.OriginCollection, tag.Origin)
 	if err != nil {
-		return fmt.Errorf("error getting origin id of tag, %w", err)
+		return err
 	}
 
-	ag, err := aggregates.Get(tag.Time)
-	if err != nil && !errors.Is(err, db.KeyNotFoundError) {
-		return fmt.Errorf("error getting aggregates, %w", err)
-	}
-
-	var tA *db.TypeAggregates
-	switch tag.Action {
-	case types.Buy:
-		tA = &ag.Result.Buys
-	case types.View:
-		tA = &ag.Result.Views
-	default:
-		return fmt.Errorf("unknown action, %d", tag.Action)
-	}
-
-	found := false
-	for i, a := range tA.Sum {
-		if a.BrandId == uint8(brandID) && a.Origin == uint8(originID) && a.CategoryId == uint16(categoryID) {
-			found = true
-			tA.Sum[i].Data += tag.ProductInfo.Price
-			tA.Count[i].Data++
-		}
-	}
-
-	if !found {
-		tA.Sum = append(tA.Sum, db.ActionAggregates{
-			CategoryId: uint16(categoryID),
-			BrandId:    uint8(brandID),
-			Origin:     uint8(originID),
-			Data:       tag.ProductInfo.Price,
-		})
-
-		tA.Count = append(tA.Count, db.ActionAggregates{
-			CategoryId: uint16(categoryID),
-			BrandId:    uint8(brandID),
-			Origin:     uint8(originID),
-			Data:       1,
-		})
-	}
-
-	if err := aggregates.Update(tag.Time, ag.Result, ag.Generation); err != nil {
+	if err := aggregates.Add(key, tag); err != nil {
 		return fmt.Errorf("error updating aggregates, %w", err)
 	}
 	return nil

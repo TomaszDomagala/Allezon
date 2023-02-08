@@ -3,6 +3,7 @@ package db
 import (
 	"time"
 
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"go.uber.org/zap"
 )
 
@@ -28,13 +29,13 @@ type nullAggregatesClient struct {
 	logger *zap.Logger
 }
 
-func (n *nullAggregatesClient) Get(minuteStart time.Time) (GetResult[Aggregates], error) {
-	n.logger.Debug("null aggregates client invoked", zap.String("method", "Get"), zap.Time("minuteStart", minuteStart))
-	return GetResult[Aggregates]{}, nil
+func (n *nullAggregatesClient) Get(time time.Time, action types.Action) ([]ActionAggregates, error) {
+	n.logger.Debug("null aggregates client invoked", zap.String("method", "Get"), zap.Time("time", time), zap.String("action", action.String()))
+	return nil, nil
 }
 
-func (n *nullAggregatesClient) Update(minuteStart time.Time, aggregates Aggregates, generation Generation) error {
-	n.logger.Debug("null aggregates client invoked", zap.String("method", "Update"), zap.Time("minuteStart", minuteStart), zap.Any("aggregates", aggregates), zap.Uint32("generation", uint32(generation)))
+func (n *nullAggregatesClient) Add(key AggregateKey, tag types.UserTag) error {
+	n.logger.Debug("null aggregates client invoked", zap.String("method", "Add"), zap.Any("key", key), zap.Any("tag", tag))
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/aerospike/aerospike-client-go/v6/types"
+	"go.uber.org/zap"
 )
 
 const userProfilesSet = "user_profiles"
@@ -15,6 +16,7 @@ const userProfilesBuysBin = "buys"
 
 type userProfileClient struct {
 	cl *as.Client
+	l  *zap.Logger
 }
 
 func (u userProfileClient) Get(cookie string) (res GetResult[UserProfile], err error) {
@@ -59,7 +61,7 @@ func (u userProfileClient) Update(cookie string, userProfile UserProfile, genera
 		return ae
 	}
 
-	policy := as.NewWritePolicy(generation, as.TTLServerDefault)
+	policy := as.NewWritePolicy(generation, as.TTLDontExpire)
 	policy.RecordExistsAction = as.UPDATE
 	policy.GenerationPolicy = as.EXPECT_GEN_EQUAL
 

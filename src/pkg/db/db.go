@@ -2,9 +2,11 @@ package db
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	as "github.com/aerospike/aerospike-client-go/v6"
+	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
@@ -32,26 +34,21 @@ type UserProfile struct {
 	Buys  []types.UserTag
 }
 
-type ActionAggregates struct {
+type AggregateKey struct {
 	CategoryId uint16
-	BrandId    uint8
-	Origin     uint8
-	Data       uint32
+	BrandId    uint16
+	Origin     uint16
 }
 
-type TypeAggregates struct {
-	Sum   []ActionAggregates
-	Count []ActionAggregates
-}
-
-type Aggregates struct {
-	Views TypeAggregates
-	Buys  TypeAggregates
+type ActionAggregates struct {
+	Key   AggregateKey
+	Sum   uint64
+	Count uint16
 }
 
 type AggregatesClient interface {
-	Get(minuteStart time.Time) (GetResult[Aggregates], error)
-	Update(minuteStart time.Time, aggregates Aggregates, generation Generation) error
+	Get(time time.Time, action types.Action) ([]ActionAggregates, error)
+	Add(key AggregateKey, tag types.UserTag) error
 }
 
 type Client interface {
@@ -64,17 +61,18 @@ type ClientPolicy = as.ClientPolicy
 
 type client struct {
 	cl *as.Client
+	l  *zap.Logger
 }
 
-func NewClientFromAddresses(addresses []string) (Client, error) {
+func NewClientFromAddresses(logger *zap.Logger, addresses ...string) (Client, error) {
 	hosts, err := as.NewHosts(addresses...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting hosts from addresses, %w", err)
 	}
-	return NewClient(nil, hosts...)
+	return NewClient(nil, logger, hosts...)
 }
 
-func NewClient(clientPolicy *ClientPolicy, hosts ...*Host) (Client, error) {
+func NewClient(clientPolicy *ClientPolicy, logger *zap.Logger, hosts ...*Host) (Client, error) {
 	cl, err := as.NewClientWithPolicyAndHost(clientPolicy, hosts...)
-	return client{cl: cl}, err
+	return client{cl: cl, l: logger}, err
 }
