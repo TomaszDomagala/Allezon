@@ -187,6 +187,23 @@ kibana-credentials: ## Get Kibana credentials.
 	@echo "Kibana username: elastic"
 	@echo "Kibana password: $(shell kubectl get secret --namespace default elasticsearch-master-credentials -o jsonpath='{.data.password}' | base64 --decode)"
 
+# This helm charts are using elastic repo: https://helm.elastic.co
+.PHONY: local-deploy-elk
+local-elk-deploy: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
+	helm install elasticsearch elastic/elasticsearch -f $(CHARTS_DIR)/elastic.yaml
+	helm install kibana elastic/kibana
+	helm install filebeat elastic/filebeat
+	helm install logstash elastic/logstash
+
+.PHONY: kibana-port-forward
+kibana-port-forward: ## Forward the local kind cluster port to the local machine.
+	kubectl port-forward svc/kibana-kibana 5601:5601
+
+.PHONY: kibana-credentials
+kibana-credentials: ## Get Kibana credentials.
+	@echo "Kibana username: elastic"
+	@echo "Kibana password: $(shell kubectl get secret --namespace default elasticsearch-master-credentials -o jsonpath='{.data.password}' | base64 --decode)"
+
 
 .PHONY: remote-port-forward
 remote-port-forward: ## Forward the local kind cluster port to the remote VM.
