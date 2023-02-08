@@ -3,8 +3,9 @@ package db
 import (
 	"time"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 type nullClient struct {

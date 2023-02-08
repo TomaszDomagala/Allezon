@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
-	"github.com/gin-gonic/gin"
 )
 
 type aggregatesRequest struct {
