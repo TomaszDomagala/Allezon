@@ -17,7 +17,7 @@ import (
 type aggregatesRequest struct {
 	TimeRange  string   `form:"time_range" binding:"required"`
 	Action     string   `form:"action" binding:"required,oneof=BUY VIEW"`
-	Aggregates []string `form:"aggregates" binding:"required"`
+	Aggregates []string `form:"aggregates" binding:"required,dive,oneof=sum_price count"`
 	Origin     *string  `form:"origin" binding:"-"`
 	BrandId    *string  `form:"brand_id" binding:"-"`
 	CategoryId *string  `form:"category_id" binding:"-"`
