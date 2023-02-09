@@ -11,8 +11,10 @@ KIND_SETUP_FILE ?= "kind.setup.yaml"
 KIND_CLUSTER_NAME ?= "allezon-cluster"
 
 # Helm config.
-HELM_CHARTS ?= api allezon foo
+HELM_CHARTS ?= api allezon idgetter worker ippool
 HELM_RELEASE_NAME ?= allezon
+
+HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
 
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
 export DOCKER_BUILDKIT = 1
@@ -120,6 +122,10 @@ helm-dependency-update: ## Update all helm dependencies.
 helm-install: ## Install allezon helm chart.
 	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
 
+.PHONY: helm-install-local
+helm-install-local: ## Install allezon helm chart using local setup.
+	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml
+
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall allezon helm chart.
 	helm uninstall $(HELM_RELEASE_NAME)
@@ -128,23 +134,42 @@ helm-uninstall: ## Uninstall allezon helm chart.
 helm-upgrade: ## Upgrade allezon helm chart.
 	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
 
+.PHONY: helm-upgrade-local
+helm-upgrade-local: ## Upgrade allezon helm chart using local setup.
+	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml
+
 # Local deployment targets. This is probably the most useful section of this Makefile.
 # Use local-deploy to deploy allezon locally.
 # For configuration changes, use local-deploy-update-helm to update the helm charts.
 
 .PHONY: local-deploy
-local-deploy: docker-build kind-delete-cluster kind-create-cluster kind-load helm-dependency-update helm-install ## Deploy allezon locally. Will delete the kind cluster if it already exists.
+local-deploy: docker-build kind-delete-cluster kind-create-cluster kind-load helm-dependency-update helm-install-local ## Deploy allezon locally. Will delete the kind cluster if it already exists.
 
 .PHONY: local-deploy-update
-local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade ## Build and load docker images into kind and update helm charts on already running kind cluster.
+local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade-local ## Build and load docker images into kind and update helm charts on already running kind cluster.
 
 .PHONY: local-deploy-update-helm
-local-deploy-update-helm: helm-dependency-update helm-upgrade ## Update and install helm charts on already running kind cluster.
+local-deploy-update-helm: helm-dependency-update helm-upgrade-local ## Update and install helm charts on already running kind cluster.
 
 
 .PHONY: remote-port-forward
 remote-port-forward: ## Forward the local kind cluster port to the remote VM.
 	ssh -R  $(PORT_FORWARD_REMOTE_PORT):localhost:$(PORT_FORWARD_LOCAL_PORT) -N $(PORT_FORWARD_HOST)
+
+# Real cluster deployment targets. These targets are used to deploy allezon to a remote cluster.
+
+.PHONY: cluster-deploy
+cluster-deploy: helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
+
+.PHONY: cluster-deploy-update
+cluster-deploy-update: helm-dependency-update helm-upgrade ## Update allezon on a remote cluster.
+
+.PHONY: cluster-uninstall
+cluster-uninstall: helm-uninstall ## Uninstall allezon from a remote cluster.
+
+.PHONY: cluster-loadbalancer-ip-install
+cluster-loadbalancer-ip-install: ## Install the LoadBalancer IP address on the remote cluster.
+	helm install $(HELM_IPPOOL_RELEASE_NAME) $(CHARTS_DIR)/ippool
 
 # Misc targets.
 

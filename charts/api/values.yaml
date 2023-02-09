@@ -16,7 +16,7 @@ fullnameOverride: ""
 
 env:
   - name: KAFKA_NULL_PRODUCER
-    value: "true"
+    value: "false"
 
 
 serviceAccount:
