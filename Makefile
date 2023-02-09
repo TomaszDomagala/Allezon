@@ -19,6 +19,8 @@ HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
 export DOCKER_BUILDKIT = 1
 
+DOCKER_REPO ?= "registry.gitlab.com"
+
 DOCKER_NAMESPACE ?= "registry.gitlab.com/allezon/registry"
 
 # api service config
@@ -86,7 +88,7 @@ docker-push-worker: ## Push the Worker docker image.
 # Required once before push
 .PHONY: docker-login
 docker-login:
-	docker login registry.gitlab.com
+	docker login $(DOCKER_REPO)
 
 
 # Kind targets. Kind is a tool for running local Kubernetes clusters using Docker container "nodes".
