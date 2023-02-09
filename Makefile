@@ -179,6 +179,10 @@ cluster-uninstall: helm-uninstall ## Uninstall allezon from a remote cluster.
 cluster-loadbalancer-ip-install: ## Install the LoadBalancer IP address on the remote cluster.
 	helm install $(HELM_IPPOOL_RELEASE_NAME) $(CHARTS_DIR)/ippool
 
+.PHONE: cluster-loadbalancer-ip-uninstall
+cluster-loadbalancer-ip-uninstall: ## Uninstall the LoadBalancer IP address from the remote cluster.
+	helm uninstall $(HELM_IPPOOL_RELEASE_NAME)
+
 # Misc targets.
 
 .PHONY: help
