@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	apiImageName = "tomaszdomagala/allezon-api"
+	apiImageName = dockerRepo + "/api"
 	apiImageTag  = "latest"
 
 	APIPort       = "8080"

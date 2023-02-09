@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	workerImageName = "tomaszdomagala/allezon-worker"
+	workerImageName = dockerRepo + "/worker"
 	workerImageTag  = "latest"
 
 	WorkerPort       = "8082"

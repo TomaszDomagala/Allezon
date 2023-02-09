@@ -5,12 +5,13 @@
 replicaCount: 1
 
 image:
-  repository: tomaszdomagala/allezon-api
+  repository: registry.gitlab.com/allezon/registry/api
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.1.0"
 
-imagePullSecrets: []
+imagePullSecrets:
+  - name: registry-credentials
 nameOverride: ""
 fullnameOverride: ""
 

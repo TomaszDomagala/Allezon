@@ -25,6 +25,10 @@ appVersion: "1.16.0"
 
 dependencies:
   # === Our own charts ===
+  - name: gitlab-secret
+    version: 0.1.0
+    repository: file://../gitlab-secret
+
   - name: api
     version: 0.1.0
     repository: file://../api
