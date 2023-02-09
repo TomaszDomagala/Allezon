@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: allezon/worker
+  repository: registry.gitlab.com/allezon/registry/worker
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.1.0"
