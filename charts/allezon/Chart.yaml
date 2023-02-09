@@ -37,18 +37,17 @@ dependencies:
     version: 0.1.0
     repository: file://../idgetter
 
-  # This is here only for kind deployment
-#  - name: kind-ingress-nginx
-#    version: 0.1.0
-#    repository: file://../kind-ingress-nginx
+  # This is here only for kind deployment and is disabled by default.
+  - name: kind-ingress-nginx
+    version: 0.1.0
+    repository: file://../kind-ingress-nginx
 
+  # MetalLB is here for real deployment and is enabled by default.
+  # For it to work, you also need to install ippool chart separately.
   - name: metallb
     repository: https://metallb.github.io/metallb
     version: 0.13.7
 
-#  - name: ippool
-#    repository: file://../ippool
-#    version: 0.1.0
 
   #  - name: foo
   #    version: 0.1.0
@@ -67,11 +66,6 @@ dependencies:
     #  - name: ingress-nginx
     #    version: 4.4.2
     #    repository: https://kubernetes.github.io/ingress-nginx
-
-    #
-    #  - name: metallb
-    #    version: 0.13.7
-    #    repository: https://metallb.github.io/metallb
 
 
     #    TODO: I think kind has coreDNS installed by default, so we don't need this

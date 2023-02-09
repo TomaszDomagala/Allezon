@@ -8,6 +8,9 @@ dependencies:
 - name: idgetter
   repository: file://../idgetter
   version: 0.1.0
+- name: kind-ingress-nginx
+  repository: file://../kind-ingress-nginx
+  version: 0.1.0
 - name: metallb
   repository: https://metallb.github.io/metallb
   version: 0.13.7
@@ -17,5 +20,5 @@ dependencies:
 - name: aerospike
   repository: https://aerospike.github.io/aerospike-kubernetes
   version: 5.5.0
-digest: sha256:9130eed595083852f0153fa5ab98a6406ad64f2793c5b3608201eca2a59cadde
-generated: "2023-02-09T14:21:00.693503411+01:00"
+digest: sha256:d80624877f531ed70d236f5d576ea903ee120b0fb3e8667f0f357286085aa905
+generated: "2023-02-09T21:39:12.310064598+01:00"

@@ -1,0 +1,11 @@
+
+kind-ingress-nginx:
+  enabled: true
+
+metallb:
+  controller:
+    enabled: false
+  speaker:
+    enabled: false
+  crds:
+    enabled: false
