@@ -8,14 +8,14 @@ dependencies:
 - name: idgetter
   repository: file://../idgetter
   version: 0.1.0
-- name: kind-ingress-nginx
-  repository: file://../kind-ingress-nginx
-  version: 0.1.0
+- name: metallb
+  repository: https://metallb.github.io/metallb
+  version: 0.13.7
 - name: redpanda
   repository: https://charts.redpanda.com
-  version: 2.6.0
+  version: 2.8.6
 - name: aerospike
   repository: https://aerospike.github.io/aerospike-kubernetes
   version: 5.5.0
-digest: sha256:144268b144bfaea2620bab85c64a236ff2c37837689ea3805d0f72936aa5957b
-generated: "2023-01-29T17:13:03.685471795+01:00"
+digest: sha256:9130eed595083852f0153fa5ab98a6406ad64f2793c5b3608201eca2a59cadde
+generated: "2023-02-09T14:21:00.693503411+01:00"

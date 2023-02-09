@@ -55,6 +55,16 @@ redpanda:
   nameOverride: redpanda
   fullnameOverride: redpanda
 
+#  THIS IS EMPTYDIR, NOT PERSISTENT STORAGE
+#  CHANGE IT TO PERSISTENT STORAGE IN REAL DEPLOYMENT
+#  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-cluster-requirements/#storage-volumes
+#  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-best-practices/#storage
+#  https://docs.redpanda.com/docs/manage/kubernetes/configure-storage/
+  storage:
+    hostPath: ""
+    persistentVolume:
+      enabled: false
+
 
 aerospike:
   dbReplicas: 1 # Change to 3 in real deployment.

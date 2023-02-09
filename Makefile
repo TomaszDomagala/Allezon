@@ -11,8 +11,10 @@ KIND_SETUP_FILE ?= "kind.setup.yaml"
 KIND_CLUSTER_NAME ?= "allezon-cluster"
 
 # Helm config.
-HELM_CHARTS ?= api allezon foo
+HELM_CHARTS ?= api allezon idgetter worker ippool
 HELM_RELEASE_NAME ?= allezon
+
+HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
 
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
 export DOCKER_BUILDKIT = 1
@@ -145,6 +147,14 @@ local-deploy-update-helm: helm-dependency-update helm-upgrade ## Update and inst
 .PHONY: remote-port-forward
 remote-port-forward: ## Forward the local kind cluster port to the remote VM.
 	ssh -R  $(PORT_FORWARD_REMOTE_PORT):localhost:$(PORT_FORWARD_LOCAL_PORT) -N $(PORT_FORWARD_HOST)
+
+
+.PHONY: cluster-deploy
+cluster-deploy: helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
+
+.PHONY: cluster-loadbalancer-ip-install
+cluster-loadbalancer-ip-install: ## Install the LoadBalancer IP address on the remote cluster.
+	helm install $(HELM_IPPOOL_RELEASE_NAME) $(CHARTS_DIR)/ippool
 
 # Misc targets.
 

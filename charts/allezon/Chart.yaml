@@ -38,10 +38,17 @@ dependencies:
     repository: file://../idgetter
 
   # This is here only for kind deployment
-  - name: kind-ingress-nginx
-    version: 0.1.0
-    repository: file://../kind-ingress-nginx
+#  - name: kind-ingress-nginx
+#    version: 0.1.0
+#    repository: file://../kind-ingress-nginx
 
+  - name: metallb
+    repository: https://metallb.github.io/metallb
+    version: 0.13.7
+
+#  - name: ippool
+#    repository: file://../ippool
+#    version: 0.1.0
 
   #  - name: foo
   #    version: 0.1.0
@@ -50,7 +57,7 @@ dependencies:
 
   # === Third-party charts ===
   - name: redpanda
-    version: 2.6.0
+    version: 2.8.6
     repository: https://charts.redpanda.com
 
   - name: aerospike
