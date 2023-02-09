@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	idgetterImageName = "tomaszdomagala/allezon-idgetter"
+	idgetterImageName = dockerRepo + "/idgetter"
 	idgetterImageTag  = "latest"
 
 	IDGetterPort       = "8080"
