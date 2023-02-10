@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gin-gonic/gin"
-	"github.com/hashicorp/go-multierror"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
@@ -37,19 +37,17 @@ func (s server) userTagsHandler(c *gin.Context) {
 	}
 	var errGrp errgroup.Group
 
-	errGrp.Go(func() (err error) {
-		start := time.Now()
-		const timeout = 70 * time.Millisecond
-		const sleep = 10 * time.Millisecond
-		for time.Since(start) <= timeout {
-			if updateErr := updateUserProfile(userTag, s.db.UserProfiles()); updateErr == nil {
-				return nil
-			} else {
-				err = multierror.Append(err, updateErr)
-				time.Sleep(sleep)
-			}
+	errGrp.Go(func() error {
+		b := backoff.NewExponentialBackOff()
+		b.MaxElapsedTime = 70 * time.Millisecond
+		b.InitialInterval = 10 * time.Millisecond
+		err := backoff.Retry(func() error {
+			return updateUserProfile(userTag, s.db.UserProfiles())
+		}, b)
+		if err != nil {
+			return fmt.Errorf("adding user profiles timeout, %w", err)
 		}
-		return fmt.Errorf("adding user profiles timeout, %w", err)
+		return nil
 	})
 	errGrp.Go(func() error {
 		return s.producer.Send(userTag)
