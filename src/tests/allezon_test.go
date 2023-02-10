@@ -191,7 +191,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			action:     types.View,
 			aggregates: []types.Aggregate{types.Sum, types.Count},
 			expected: dto.AggregatesDTO{
-				Columns: []string{"1m_bucket", "action", string(types.Sum), string(types.Count)},
+				Columns: []string{"1m_bucket", "action", types.Sum.String(), types.Count.String()},
 				Rows: [][]string{
 					{maNow.Format(dto.TimeRangeSecPrecisionLayout), "VIEW", "100", "1"},
 				},
@@ -257,7 +257,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 
 		params.Add("action", aggReq.action.String())
 		for _, a := range aggReq.aggregates {
-			params.Add("aggregates", string(a))
+			params.Add("aggregates", a.String())
 		}
 
 		if aggReq.origin != nil {

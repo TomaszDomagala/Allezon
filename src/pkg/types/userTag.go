@@ -23,12 +23,23 @@ func (d Device) String() string {
 	}
 }
 
-type Aggregate string
+type Aggregate int8
 
 const (
-	Sum   Aggregate = "sum_price"
-	Count Aggregate = "count"
+	Sum Aggregate = iota
+	Count
 )
+
+func (a Aggregate) String() string {
+	switch a {
+	case Sum:
+		return "SUM_PRICE"
+	case Count:
+		return "COUNT"
+	default:
+		return "Unknown"
+	}
+}
 
 type Action int8
 
