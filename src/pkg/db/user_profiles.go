@@ -1,13 +1,15 @@
 package db
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
 	as "github.com/aerospike/aerospike-client-go/v6"
-	"github.com/aerospike/aerospike-client-go/v6/types"
+	asTypes "github.com/aerospike/aerospike-client-go/v6/types"
+	"github.com/bytedance/sonic"
 	"go.uber.org/zap"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 const userProfilesSet = "user_profiles"
@@ -19,69 +21,148 @@ type userProfileClient struct {
 	l  *zap.Logger
 }
 
-func (u userProfileClient) Get(cookie string) (res GetResult[UserProfile], err error) {
-	// TODO Get in case of update may be optimized to only Get affected bin.
+func marshallTag(tag types.UserTag) ([]byte, error) {
+	return sonic.ConfigFastest.Marshal(tag)
+}
+
+func unmarshallTag(data []byte, tag *types.UserTag) (err error) {
+	return sonic.ConfigFastest.Unmarshal(data, tag)
+}
+
+func (u userProfileClient) decodeBin(up *[]types.UserTag, action types.Action, bins as.BinMap) error {
+	binName := u.actionToBin(action)
+	raw, ok := bins[binName]
+	if !ok {
+		return nil
+	}
+	pairs, ok := raw.([]as.MapPair)
+	if !ok {
+		return fmt.Errorf("bin %s has a wrong type: %T", binName, raw)
+	}
+	*up = make([]types.UserTag, len(pairs))
+	for i, kv := range pairs {
+		value, ok := kv.Value.([]byte)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for key %s in bin %s", kv.Value, kv.Key, kv.Value)
+		}
+		if err := unmarshallTag(value, &(*up)[i]); err != nil {
+			return fmt.Errorf("cannot unmarshall tag %s, %w", string(value), err)
+		}
+	}
+	return nil
+}
+
+func (u userProfileClient) Get(cookie string) (up UserProfile, err error) {
 	key, err := as.NewKey(AllezonNamespace, userProfilesSet, cookie)
 	if err != nil {
-		return res, err
+		return UserProfile{}, err
 	}
-	r, err := u.cl.Get(nil, key, userProfilesBuysBin, userProfilesViewsBin)
+	r, err := u.cl.Get(nil, key, userProfilesViewsBin, userProfilesBuysBin)
 	if err != nil {
 		if errors.Is(err, as.ErrKeyNotFound) {
-			return res, fmt.Errorf("user profiles for cookie %s not found, %w", cookie, KeyNotFoundError)
+			return UserProfile{}, fmt.Errorf("aggregates for minute %s not found, %w", cookie, KeyNotFoundError)
 		}
-		return res, fmt.Errorf("failed to get user profiles, %w", err)
+		return UserProfile{}, fmt.Errorf("failed to get aggregates, %w", err)
 	}
 
-	if views, ok := r.Bins[userProfilesViewsBin].([]byte); ok {
-		if err = json.Unmarshal(views, &res.Result.Views); err != nil {
-			return res, fmt.Errorf("couldn't unmarshall views, %w", err)
-		}
-	} else {
-		return res, fmt.Errorf("views have wrong type: %T", r.Bins[userProfilesViewsBin])
+	if err := u.decodeBin(&up.Views, types.View, r.Bins); err != nil {
+		return UserProfile{}, fmt.Errorf("error parsing views, %w", err)
 	}
-
-	if buys, ok := r.Bins[userProfilesBuysBin].([]byte); ok {
-		if err = json.Unmarshal(buys, &res.Result.Buys); err != nil {
-			return res, fmt.Errorf("couldn't unmarshall buys, %w", err)
-		}
-	} else {
-		return res, fmt.Errorf("buys have wrong type: %T", r.Bins[userProfilesBuysBin])
+	if err := u.decodeBin(&up.Buys, types.Buy, r.Bins); err != nil {
+		return UserProfile{}, fmt.Errorf("error parsing buys, %w", err)
 	}
-
-	res.Generation = r.Generation
-
 	return
 }
 
-func (u userProfileClient) Update(cookie string, userProfile UserProfile, generation Generation) error {
-	// TODO Update may only update affected bin.
-	key, ae := as.NewKey(AllezonNamespace, userProfilesSet, cookie)
+func (u userProfileClient) Add(tag types.UserTag) (int, error) {
+	name := tag.Cookie
+	key, ae := as.NewKey(AllezonNamespace, userProfilesSet, name)
 	if ae != nil {
-		return ae
+		return 0, fmt.Errorf("error creating key %s, %w", name, ae)
+	}
+	marshalledTag, err := marshallTag(tag)
+	if err != nil {
+		return 0, fmt.Errorf("error marshalling tag %#v, %w", tag, err)
 	}
 
-	policy := as.NewWritePolicy(generation, as.TTLDontExpire)
+	policy := as.NewWritePolicy(0, as.TTLDontExpire)
 	policy.RecordExistsAction = as.UPDATE
-	policy.GenerationPolicy = as.EXPECT_GEN_EQUAL
 
-	views, err := json.Marshal(userProfile.Views)
+	binName := u.actionToBin(tag.Action)
+	mapPolicy := as.NewMapPolicy(as.MapOrder.KEY_ORDERED, as.MapWriteMode.UPDATE)
+	increaseCountOp := as.MapPutOp(mapPolicy, binName, tag.Time.UnixMilli(), marshalledTag)
+
+	r, err := u.cl.Operate(policy, key, increaseCountOp)
 	if err != nil {
-		return fmt.Errorf("couldn't marshal views, %w", err)
+		return 0, fmt.Errorf("error while trying to add to user profiles, tag %#v, %w", tag, err)
+	}
+	newLen := r.Bins[binName]
+	if nL, ok := newLen.(int); ok {
+		return nL, nil
+	}
+	return 0, fmt.Errorf("unexpected type of new map length, %T", newLen)
+}
+
+func (u userProfileClient) RemoveOverLimit(cookie string, action types.Action, limit int) error {
+	key, err := as.NewKey(AllezonNamespace, userProfilesSet, cookie)
+	if err != nil {
+		return fmt.Errorf("error creating key %s, %w", cookie, err)
 	}
 
-	buys, err := json.Marshal(userProfile.Buys)
-	if err != nil {
-		return fmt.Errorf("couldn't marshal buys, %w", err)
-	}
+	sizePolicy := as.NewWritePolicy(0, as.TTLDontExpire)
+	sizePolicy.RecordExistsAction = as.UPDATE_ONLY
 
-	if putErr := u.cl.Put(policy, key, as.BinMap{userProfilesBuysBin: buys, userProfilesViewsBin: views}); putErr != nil {
-		if putErr.Matches(types.GENERATION_ERROR) {
-			return fmt.Errorf("%w while trying to update %s, %s", GenerationMismatch, cookie, putErr)
+	binName := u.actionToBin(action)
+	sizeOp := as.MapSizeOp(binName)
+	r, err := u.cl.Operate(sizePolicy, key, sizeOp)
+	if err != nil {
+		if err.Matches(asTypes.KEY_NOT_FOUND_ERROR) {
+			return nil
 		}
-		return fmt.Errorf("error while trying to update %s, %w", cookie, putErr)
+		return fmt.Errorf("error getting size of action %s for cookie %s, %w", cookie, action, err)
 	}
+	lengthRaw, ok := r.Bins[binName]
+	if !ok {
+		return fmt.Errorf("bin %s missing", binName)
+	}
+	if lengthRaw == nil {
+		// Bin not yet populated.
+		return nil
+	}
+	length, ok := lengthRaw.(int)
+	if !ok {
+		return fmt.Errorf("length has unexpected type %T", lengthRaw)
+	}
+	toRemove := length - limit
+	if toRemove <= 0 {
+		return nil
+	}
+
+	removePolicy := as.NewWritePolicy(r.Generation, as.TTLDontExpire)
+	removePolicy.RecordExistsAction = as.UPDATE_ONLY
+	removePolicy.GenerationPolicy = as.EXPECT_GEN_EQUAL
+
+	removeOp := as.MapRemoveByIndexRangeCountOp(binName, 0, toRemove, as.MapReturnType.COUNT)
+	if _, err := u.cl.Operate(removePolicy, key, removeOp); err != nil {
+		if err.Matches(asTypes.GENERATION_ERROR) {
+			return fmt.Errorf("%w while trying to remove over limit %s, %s", GenerationMismatch, cookie, err)
+		}
+		return fmt.Errorf("error removing over limit of action %s for cookie %s, %w", cookie, action, err)
+	}
+
 	return nil
+}
+
+func (u userProfileClient) actionToBin(action types.Action) string {
+	switch action {
+	case types.Buy:
+		return userProfilesBuysBin
+	case types.View:
+		return userProfilesViewsBin
+	default:
+		u.l.Fatal("unexpected value for action", zap.Int8("action", int8(action)))
+		panic(nil)
+	}
 }
 
 func (c client) UserProfiles() UserProfileClient {

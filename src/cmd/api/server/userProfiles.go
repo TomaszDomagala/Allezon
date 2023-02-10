@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
@@ -68,15 +68,12 @@ func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.User
 	}
 	toMilli := to.UnixMilli()
 	fromMilli := from.UnixMilli()
-	// Tags we get from DB are sorted in ascending order.
 	selected := make([]dto.UserTagDTO, 0, limit)
-	for _, tag := range tags {
-		milli := tag.Time.UnixMilli()
+	// Tags we get from DB are sorted in ascending order.
+	for i := len(tags) - 1; i >= 0 && len(selected) < limit; i-- {
+		milli := tags[i].Time.UnixMilli()
 		if fromMilli <= milli && milli < toMilli {
-			selected = append(selected, dto.IntoUserTagDTO(tag))
-			if len(selected) == limit {
-				break
-			}
+			selected = append(selected, dto.IntoUserTagDTO(tags[i]))
 		}
 	}
 	return selected
@@ -93,11 +90,11 @@ func (s server) userProfiles(cookie string, from, to time.Time, limit int) (dto.
 		}
 		return dto.UserProfileDTO{}, fmt.Errorf("error getting user profiles from db, %w", err)
 	}
-	s.logger.Debug("got user profiles from db", zap.Any("views", res.Result.Views), zap.Any("buys", res.Result.Buys))
+	s.logger.Debug("got user profiles from db", zap.Any("views", res.Views), zap.Any("buys", res.Buys))
 
 	return dto.UserProfileDTO{
 		Cookie: cookie,
-		Views:  convertTags(res.Result.Views, from, to, limit),
-		Buys:   convertTags(res.Result.Buys, from, to, limit),
+		Views:  convertTags(res.Views, from, to, limit),
+		Buys:   convertTags(res.Buys, from, to, limit),
 	}, nil
 }

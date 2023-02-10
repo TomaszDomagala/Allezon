@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	as "github.com/aerospike/aerospike-client-go/v6"
+	"github.com/nsf/jsondiff"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
@@ -117,29 +119,118 @@ func (s *DBSuite) Test_UserProfiles() {
 	m := s.newClient()
 
 	up := m.UserProfiles()
-	const cookie = "foobar"
-	t := UserProfile{
-		Views: []types.UserTag{{Cookie: "42"}},
-		Buys:  []types.UserTag{{Cookie: "6"}, {Cookie: "9"}},
+	now := time.Now()
+
+	const cookieFoo = "foo"
+	const cookieBar = "bar"
+	profiles := map[string]UserProfile{
+		cookieFoo: {
+			Views: []types.UserTag{{Time: now, Action: types.View, Cookie: cookieFoo}},
+			Buys:  []types.UserTag{{Time: now.Add(time.Second), Action: types.Buy, Cookie: cookieFoo}, {Time: now.Add(time.Minute), Action: types.Buy, Cookie: cookieFoo}},
+		},
+		cookieBar: {
+			Views: []types.UserTag{{Time: now.Add(time.Second), Action: types.View, Cookie: cookieBar}, {Time: now.Add(time.Minute), Action: types.View, Cookie: cookieBar}},
+			Buys:  []types.UserTag{{Time: now, Action: types.Buy, Cookie: cookieBar}},
+		},
 	}
 
-	err := up.Update(cookie, t, 0)
-	s.Require().NoErrorf(err, "failed to create record")
+	// Insert
+	for _, profile := range profiles {
+		for i, view := range profile.Views {
+			newLen, err := up.Add(view)
+			s.Require().NoErrorf(err, "failed to create record")
+			s.Require().Equal(i+1, newLen, "length mismatch")
+		}
+		for i, buy := range profile.Buys {
+			newLen, err := up.Add(buy)
+			s.Require().NoErrorf(err, "failed to create record")
+			s.Require().Equal(i+1, newLen, "length mismatch")
+		}
+	}
+	// Check
+	for cookie, profile := range profiles {
+		res, err := up.Get(cookie)
+		s.Require().NoErrorf(err, "failed to get record")
+		resSer, err := json.Marshal(res)
+		s.Require().NoErrorf(err, "failed to serialize profile")
+		profileSer, err := json.Marshal(profile)
+		s.Require().NoErrorf(err, "failed to serialize profile")
+		opts := jsondiff.DefaultConsoleOptions()
+		status, diff := jsondiff.Compare(profileSer, resSer, &opts)
+		s.Assert().Equal(jsondiff.FullMatch, status, diff)
+	}
+}
 
-	got, err := up.Get(cookie)
+func (s *DBSuite) Test_UserProfiles_RemoveOverLimit() {
+	m := s.newClient()
+
+	up := m.UserProfiles()
+	now := time.Now()
+
+	const cookieFoo = "foo"
+	profile := UserProfile{
+		Buys: []types.UserTag{{Time: now.Add(time.Second), Action: types.Buy, Cookie: cookieFoo}, {Time: now.Add(time.Minute), Action: types.Buy, Cookie: cookieFoo}},
+	}
+
+	// Insert
+	for i, view := range profile.Views {
+		newLen, err := up.Add(view)
+		s.Require().NoErrorf(err, "failed to create record")
+		s.Require().Equal(i+1, newLen, "length mismatch")
+	}
+	for i, buy := range profile.Buys {
+		newLen, err := up.Add(buy)
+		s.Require().NoErrorf(err, "failed to create record")
+		s.Require().Equal(i+1, newLen, "length mismatch")
+	}
+
+	// Check insertion
+	res, err := up.Get(cookieFoo)
 	s.Require().NoErrorf(err, "failed to get record")
-	s.Require().Equal(t, got.Result)
-	s.Require().Equal(uint32(1), got.Generation)
+	resSer, err := json.Marshal(res)
+	s.Require().NoErrorf(err, "failed to serialize profile")
+	profileSer, err := json.Marshal(profile)
+	s.Require().NoErrorf(err, "failed to serialize profile")
+	opts := jsondiff.DefaultConsoleOptions()
+	status, diff := jsondiff.Compare(profileSer, resSer, &opts)
+	s.Assert().Equal(jsondiff.FullMatch, status, diff)
 
-	got.Result.Buys = got.Result.Buys[:1]
+	// Remove
+	err = up.RemoveOverLimit(cookieFoo, types.Buy, 1)
+	s.Require().NoErrorf(err, "failed to remove over limit")
 
-	err = up.Update(cookie, got.Result, got.Generation)
-	s.Require().NoErrorf(err, "failed to update record")
+	// Check removal
+	profile.Buys = profile.Buys[1:]
 
-	updated, err := up.Get(cookie)
+	res, err = up.Get(cookieFoo)
 	s.Require().NoErrorf(err, "failed to get record")
-	s.Require().Equal(got.Result, updated.Result)
-	s.Require().Equal(got.Generation+1, updated.Generation)
+	resSer, err = json.Marshal(res)
+	s.Require().NoErrorf(err, "failed to serialize profile")
+	profileSer, err = json.Marshal(profile)
+	s.Require().NoErrorf(err, "failed to serialize profile")
+	opts = jsondiff.DefaultConsoleOptions()
+	status, diff = jsondiff.Compare(profileSer, resSer, &opts)
+	s.Assert().Equal(jsondiff.FullMatch, status, diff)
+}
+
+func (s *DBSuite) Test_UserProfiles_RemoveOverLimit_Errors() {
+	m := s.newClient()
+
+	up := m.UserProfiles()
+
+	const cookieFoo = "foo"
+
+	// Non-existing key removal.
+	err := up.RemoveOverLimit(cookieFoo, types.View, 10)
+	s.Require().NoErrorf(err, "error removing")
+
+	l, err := up.Add(types.UserTag{Action: types.Buy, Cookie: cookieFoo, Time: time.Now()})
+	s.Require().NoErrorf(err, "error adding key")
+	s.Require().Equal(1, l, "unexpected length")
+
+	// Non-existing action removal.
+	err = up.RemoveOverLimit(cookieFoo, types.View, 10)
+	s.Require().NoErrorf(err, "error removing")
 }
 
 func (s *DBSuite) Test_UserProfiles_ReturnsKeyNotFoundErrorOnKeyNotFound() {
@@ -149,23 +240,6 @@ func (s *DBSuite) Test_UserProfiles_ReturnsKeyNotFoundErrorOnKeyNotFound() {
 
 	_, err := up.Get("")
 	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
-}
-
-func (s *DBSuite) Test_UserProfiles_Update_ErrorOnGenerationMismatch() {
-	m := s.newClient()
-
-	up := m.UserProfiles()
-	const cookie = "foobar"
-	t := UserProfile{}
-
-	err := up.Update(cookie, t, 0)
-	s.Require().NoErrorf(err, "failed to create record")
-
-	err = up.Update(cookie, t, 0)
-	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
-
-	err = up.Update(cookie, t, 2)
-	s.Require().ErrorIs(err, GenerationMismatch, "expected generation mismatch error")
 }
 
 func sortActionAggregates(agg []ActionAggregates) {
