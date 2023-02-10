@@ -60,7 +60,9 @@ func (gc *UserProfileGC) Run() {
 	for event := range gc.eventChan {
 		cleaner, ok := gc.cleaners[event.Action]
 		if !ok {
-			cleaner = make(chan Event, cleanerChanSize)
+			cl := make(chan Event, cleanerChanSize)
+			go gc.cleaner(cl)
+			cleaner = cl
 			gc.cleaners[event.Action] = cleaner
 		}
 		cleaner <- event
@@ -70,7 +72,7 @@ func (gc *UserProfileGC) Run() {
 	}
 }
 
-func (gc *UserProfileGC) cleaner(ch <-chan Event, action types.Action) {
+func (gc *UserProfileGC) cleaner(ch <-chan Event) {
 	pq := orderedmap.New[string, time.Time]()
 	const routineLimit = 32
 
@@ -83,7 +85,7 @@ func (gc *UserProfileGC) cleaner(ch <-chan Event, action types.Action) {
 	for event := range ch {
 		pair := pq.Oldest()
 		if pair != nil && time.Since(pair.Value) < gc.gcKeyInterval {
-			if err := p.Invoke(Event{Cookie: pair.Key, Action: action}); err != nil {
+			if err := p.Invoke(Event{Cookie: pair.Key, Action: event.Action}); err != nil {
 				gc.l.Error("error cleaning user profiles", zap.Any("cookie", pair.Key), zap.Error(err))
 			} else {
 				pq.Delete(pair.Key)
@@ -95,9 +97,8 @@ func (gc *UserProfileGC) cleaner(ch <-chan Event, action types.Action) {
 		if err := p.Invoke(event); err != nil {
 			gc.l.Error("error cleaning user profiles", zap.Any("event", event), zap.Error(err))
 		} else {
-			pq.Delete(pair.Key)
+			pq.Set(event.Cookie, time.Now())
 		}
-		pq.Set(event.Cookie, time.Now())
 	}
 }
 
