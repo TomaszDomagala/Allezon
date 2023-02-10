@@ -117,11 +117,11 @@ func ToAction(s string) (types.Action, error) {
 
 func ToAggregate(s string) (types.Aggregate, error) {
 	switch s {
-	case "count":
+	case "COUNT":
 		return types.Count, nil
-	case "sum_price":
+	case "SUM_PRICE":
 		return types.Sum, nil
 	default:
-		return "", fmt.Errorf("can't convert to aggregate: %s", s)
+		return 0, fmt.Errorf("can't convert to aggregate: %s", s)
 	}
 }

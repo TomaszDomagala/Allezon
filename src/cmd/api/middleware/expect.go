@@ -44,7 +44,8 @@ func ExpectationValidator(logger *zap.Logger) gin.HandlerFunc {
 
 		c.Next()
 
-		diff, description := jsondiff.Compare(requestCopy.Bytes(), responseCopy.Bytes(), nil)
+		opts := jsondiff.DefaultConsoleOptions()
+		diff, description := jsondiff.Compare(requestCopy.Bytes(), responseCopy.Bytes(), &opts)
 		if diff != jsondiff.FullMatch {
 			logger.Error("response body does not match the expected response body",
 				zap.String("endpoint", c.FullPath()),

@@ -17,7 +17,7 @@ import (
 type aggregatesRequest struct {
 	TimeRange  string   `form:"time_range" binding:"required"`
 	Action     string   `form:"action" binding:"required,oneof=BUY VIEW"`
-	Aggregates []string `form:"aggregates" binding:"required,dive,oneof=sum_price count"`
+	Aggregates []string `form:"aggregates" binding:"required,dive,oneof=SUM_PRICE COUNT"`
 	Origin     *string  `form:"origin" binding:"-"`
 	BrandId    *string  `form:"brand_id" binding:"-"`
 	CategoryId *string  `form:"category_id" binding:"-"`
@@ -188,7 +188,7 @@ func newAggregatesResponseBuilder(aggregates []types.Aggregate, params fetchPara
 		res.columns = append(res.columns, "category_id")
 	}
 	for _, a := range aggregates {
-		res.columns = append(res.columns, string(a))
+		res.columns = append(res.columns, a.String())
 	}
 
 	res.aggs = aggregates
