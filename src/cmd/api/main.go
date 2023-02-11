@@ -92,6 +92,7 @@ func newLogger(conf *config.Config) *zap.Logger {
 
 	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
 	logger := zap.New(core, zap.AddCaller())
+	logger = logger.With(zap.String("app", "api"))
 
 	return logger
 }

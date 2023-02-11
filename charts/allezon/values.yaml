@@ -1,7 +1,7 @@
 api:
   image:
     tag: "0.2.2"
-  replicaCount: 30
+  replicaCount: 1
   env:
     # Kafka configuration
     - name: KAFKA_NULL_PRODUCER
@@ -26,7 +26,7 @@ api:
 worker:
   image:
     tag: "0.2.2"
-  replicaCount: 3
+  replicaCount: 1
   env:
     - name: PORT
       value: "8080"
@@ -51,7 +51,7 @@ idgetter:
 
 redpanda:
   statefulset:
-    replicas: 3
+    replicas: 1
   nameOverride: redpanda
   fullnameOverride: redpanda
 
@@ -67,7 +67,7 @@ redpanda:
 
 
 aerospike:
-  dbReplicas: 3 # Change to 3 in real deployment.
+  dbReplicas: 1 # Change to 3 in real deployment.
   aerospikeNamespace: "allezon"
   aerospikeNamespaceMemoryGB: "1"
   aerospikeReplicationFactor: "1" # Change to 2 in real deployment.

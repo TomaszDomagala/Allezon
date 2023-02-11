@@ -165,45 +165,51 @@ local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade-
 local-deploy-update-helm: helm-dependency-update helm-upgrade-local ## Update and install helm charts on already running kind cluster.
 
 # This helm charts are using elastic repo: https://helm.elastic.co
-.PHONY: local-deploy-elk
-local-deploy-elk: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
-	helm install elasticsearch elastic/elasticsearch -f $(CHARTS_DIR)/elastic.yaml
-	helm install kibana elastic/kibana
-	helm install filebeat elastic/filebeat
-	#helm install logstash elastic/logstash
+#.PHONY: local-deploy-elk
+#local-deploy-elk: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
+#	helm install elasticsearch elastic/elasticsearch -f $(CHARTS_DIR)/elastic.yaml
+#	helm install kibana elastic/kibana
+#	helm install filebeat elastic/filebeat
+#	#helm install logstash elastic/logstash
+#
+#.PHONE: local-deploy-elk-delete
+#local-deploy-elk-delete: ## Delete ELK stack locally.
+#	-helm delete filebeat
+#	-helm delete kibana
+#	-helm delete elasticsearch
+#
+#.PHONY: kibana-port-forward
+#kibana-port-forward: ## Forward the local kind cluster port to the local machine.
+#	kubectl port-forward svc/kibana-kibana 5601:5601
+#
+#.PHONY: kibana-credentials
+#kibana-credentials: ## Get Kibana credentials.
+#	@echo "Kibana username: elastic"
+#	@echo "Kibana password: $(shell kubectl get secret --namespace default elasticsearch-master-credentials -o jsonpath='{.data.password}' | base64 --decode)"
 
-.PHONE: local-deploy-elk-delete
-local-deploy-elk-delete: ## Delete ELK stack locally.
-	-helm delete filebeat
-	-helm delete kibana
-	-helm delete elasticsearch
+ELK_RELEASE_NAME := elk
 
-.PHONY: kibana-port-forward
-kibana-port-forward: ## Forward the local kind cluster port to the local machine.
-	kubectl port-forward svc/kibana-kibana 5601:5601
+.PHONY: elk-install
+elk-install: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
+	helm install $(ELK_RELEASE_NAME) $(CHARTS_DIR)/elk
 
-.PHONY: kibana-credentials
-kibana-credentials: ## Get Kibana credentials.
+.PHONY: elk-uninstall
+elk-uninstall: ## Delete ELK stack locally.
+	helm uninstall $(ELK_RELEASE_NAME)
+
+.PHONY: elk-upgrade
+elk-upgrade: ## Upgrade ELK stack locally.
+	helm upgrade $(ELK_RELEASE_NAME) $(CHARTS_DIR)/elk
+
+.PHONY: elk-credentials
+elk-credentials: ## Get Kibana credentials.
 	@echo "Kibana username: elastic"
-	@echo "Kibana password: $(shell kubectl get secret --namespace default elasticsearch-master-credentials -o jsonpath='{.data.password}' | base64 --decode)"
+	@echo "Kibana password: $(shell kubectl get secret elasticsearch-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')"
 
-# This helm charts are using elastic repo: https://helm.elastic.co
-.PHONY: local-deploy-elk
-local-elk-deploy: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
-	helm install elasticsearch elastic/elasticsearch -f $(CHARTS_DIR)/elastic.yaml
-	helm install kibana elastic/kibana
-	helm install filebeat elastic/filebeat
-	helm install logstash elastic/logstash
-
-.PHONY: kibana-port-forward
-kibana-port-forward: ## Forward the local kind cluster port to the local machine.
-	kubectl port-forward svc/kibana-kibana 5601:5601
-
-.PHONY: kibana-credentials
-kibana-credentials: ## Get Kibana credentials.
-	@echo "Kibana username: elastic"
-	@echo "Kibana password: $(shell kubectl get secret --namespace default elasticsearch-master-credentials -o jsonpath='{.data.password}' | base64 --decode)"
-
+.PHONY: elk-port-forward
+elk-port-forward: ## Forward the local kind cluster port to the local machine.
+	@echo "https://localhost:5601"
+	kubectl port-forward svc/kibana-kb-http 5601:5601
 
 .PHONY: remote-port-forward
 remote-port-forward: ## Forward the local kind cluster port to the remote VM.
