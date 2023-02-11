@@ -1,0 +1,10 @@
+eck-stack:
+  eck-beats:
+    enabled: true
+    name: filebeat
+    spec:
+      type: filebeat
+      elasticsearchRef:
+        name: elasticsearch
+      kibanaRef:
+        name: kibana

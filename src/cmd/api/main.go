@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Shopify/sarama"
+	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
@@ -22,10 +24,7 @@ func main() {
 		panic(fmt.Errorf("failed to load config: %w", err))
 	}
 
-	logger, err := loggerConfig(conf).Build()
-	if err != nil {
-		panic(err)
-	}
+	logger := newLogger(conf)
 
 	logger.Info("Initializing messaging", zap.Strings("addresses", conf.KafkaAddresses))
 	err = messaging.Initialize(logger, conf.KafkaAddresses, &sarama.TopicDetail{
@@ -82,24 +81,17 @@ func main() {
 	}
 }
 
-// loggerConfig returns a logger configuration based on the application configuration.
-func loggerConfig(conf *config.Config) zap.Config {
-	loggerConf := zap.NewProductionConfig()
+// newLogger returns a logger based on the application configuration.
+func newLogger(conf *config.Config) *zap.Logger {
+	encoderConfig := ecszap.NewDefaultEncoderConfig()
 
-	if conf.LoggerJSON {
-		loggerConf.Encoding = "json"
-	} else {
-		loggerConf.Encoding = "console"
-	}
+	level := zap.InfoLevel
 	if conf.LoggerDebugLevel {
-		loggerConf.Level.SetLevel(zap.DebugLevel)
-	} else {
-		loggerConf.Level.SetLevel(zap.InfoLevel)
+		level = zap.DebugLevel
 	}
-	loggerConf.Development = conf.LoggerDevelopment
 
-	// Disable sampling to log all messages.
-	// TODO: find out how sampling works and if it's useful.
-	loggerConf.Sampling = nil
-	return loggerConf
+	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
+	logger := zap.New(core, zap.AddCaller())
+
+	return logger
 }

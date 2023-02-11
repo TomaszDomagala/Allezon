@@ -11,7 +11,7 @@ KIND_SETUP_FILE ?= "kind.setup.yaml"
 KIND_CLUSTER_NAME ?= "allezon-cluster"
 
 # Helm config.
-HELM_CHARTS ?= api allezon idgetter worker ippool
+HELM_CHARTS ?= api allezon idgetter worker ippool elk
 HELM_RELEASE_NAME ?= allezon
 
 HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
@@ -24,18 +24,21 @@ DOCKER_REPO ?= "registry.gitlab.com"
 
 DOCKER_NAMESPACE ?= "registry.gitlab.com/allezon/registry"
 
+# ALLEZON_VERSION sets the version of all docker images and is used during deployment.
+ALLEZON_VERSION ?= "0.2.2"
+
 # api service config
-API_VERSION ?= "0.2.0"
+API_VERSION ?= $(ALLEZON_VERSION)
 API_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/api"
 API_DOCKERFILE ?= "api.Dockerfile"
 
 # id getter service config
-ID_GETTER_VERSION ?= "0.2.0"
+ID_GETTER_VERSION ?= $(ALLEZON_VERSION)
 ID_GETTER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/idgetter"
 ID_GETTER_DOCKERFILE ?= "id_getter.Dockerfile"
 
 # worker service config
-WORKER_VERSION ?= "0.2.0"
+WORKER_VERSION ?= $(ALLEZON_VERSION)
 WORKER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/worker"
 WORKER_DOCKERFILE ?= "worker.Dockerfile"
 
@@ -130,7 +133,7 @@ helm-dependency-update: ## Update all helm dependencies.
 
 .PHONY: helm-install
 helm-install: ## Install allezon helm chart.
-	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
+	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 .PHONY: helm-install-local
 helm-install-local: ## Install allezon helm chart using local setup.
@@ -163,11 +166,17 @@ local-deploy-update-helm: helm-dependency-update helm-upgrade-local ## Update an
 
 # This helm charts are using elastic repo: https://helm.elastic.co
 .PHONY: local-deploy-elk
-local-elk-deploy: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
+local-deploy-elk: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
 	helm install elasticsearch elastic/elasticsearch -f $(CHARTS_DIR)/elastic.yaml
 	helm install kibana elastic/kibana
 	helm install filebeat elastic/filebeat
-	helm install logstash elastic/logstash
+	#helm install logstash elastic/logstash
+
+.PHONE: local-deploy-elk-delete
+local-deploy-elk-delete: ## Delete ELK stack locally.
+	-helm delete filebeat
+	-helm delete kibana
+	-helm delete elasticsearch
 
 .PHONY: kibana-port-forward
 kibana-port-forward: ## Forward the local kind cluster port to the local machine.
@@ -186,7 +195,7 @@ remote-port-forward: ## Forward the local kind cluster port to the remote VM.
 # Real cluster deployment targets. These targets are used to deploy allezon to a remote cluster.
 
 .PHONY: cluster-deploy
-cluster-deploy: helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
+cluster-deploy: docker-build docker-push helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
 
 .PHONY: cluster-deploy-update
 cluster-deploy-update: docker-build docker-push helm-dependency-update helm-upgrade ## Update allezon on a remote cluster.

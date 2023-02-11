@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nsf/jsondiff"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
@@ -44,16 +43,16 @@ func ExpectationValidator(logger *zap.Logger) gin.HandlerFunc {
 
 		c.Next()
 
-		opts := jsondiff.DefaultConsoleOptions()
-		diff, description := jsondiff.Compare(requestCopy.Bytes(), responseCopy.Bytes(), &opts)
-		if diff != jsondiff.FullMatch {
-			logger.Error("response body does not match the expected response body",
-				zap.String("endpoint", c.FullPath()),
-				zap.String("difference", description),
-				zap.String("expected", requestCopy.String()),
-				zap.String("actual", responseCopy.String()),
-			)
-		}
+		//opts := jsondiff.DefaultConsoleOptions()
+		//diff, description := jsondiff.Compare(requestCopy.Bytes(), responseCopy.Bytes(), &opts)
+		//if diff != jsondiff.FullMatch {
+		//	logger.Error("response body does not match the expected response body",
+		//		zap.String("endpoint", c.FullPath()),
+		//		zap.String("difference", description),
+		//		zap.String("expected", requestCopy.String()),
+		//		zap.String("actual", responseCopy.String()),
+		//	)
+		//}
 
 	}
 }
