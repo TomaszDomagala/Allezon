@@ -38,40 +38,39 @@ const chanSize = 1024
 
 var numProcessors = runtime.NumCPU()
 
+func (w worker) createGc() userProfilesGc.GC {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 500 * time.Millisecond
+	bo.Multiplier = 3
+	bo.MaxElapsedTime = time.Minute
+	bo.MaxInterval = 10 * time.Second
+
+	deps := userProfilesGc.Dependencies{
+		Logger:              w.logger,
+		GcKeyInterval:       time.Minute,
+		Backoff:             bo,
+		UserProfilesCleaner: w.db.UserProfiles().RemoveOverLimit,
+		Limit:               200,
+	}
+	return userProfilesGc.New(&deps)
+}
+
 func (w worker) Run(ctx context.Context) error {
 	tagsChan := make(chan types.UserTag, chanSize)
 	defer close(tagsChan)
 	aggregatesChan := make(chan types.UserTag, chanSize)
 	defer close(aggregatesChan)
-	gcEventsChan := make(chan userProfilesGc.Event, chanSize)
-	defer close(gcEventsChan)
 
 	go func() {
-		bo := backoff.NewExponentialBackOff()
-		bo.InitialInterval = 500 * time.Millisecond
-		bo.Multiplier = 3
-		bo.MaxElapsedTime = time.Minute
-		bo.MaxInterval = 10 * time.Second
+		gc := w.createGc()
+		defer gc.Close()
 
-		deps := userProfilesGc.Dependencies{
-			Logger:              w.logger,
-			EventChan:           gcEventsChan,
-			GcKeyInterval:       time.Minute,
-			Backoff:             bo,
-			UserProfilesCleaner: w.db.UserProfiles().RemoveOverLimit,
-			Limit:               200,
-		}
-		gc := userProfilesGc.New(deps)
-		gc.Run() // Lifetime bound to gcEventsChan.
-	}()
-
-	go func() {
 		for tag := range tagsChan {
 			aggregatesChan <- tag
-			gcEventsChan <- userProfilesGc.Event{
+			gc.Process(userProfilesGc.Event{
 				Cookie: tag.Cookie,
 				Action: tag.Action,
-			}
+			})
 		}
 	}()
 
