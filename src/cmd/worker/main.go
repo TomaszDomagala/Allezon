@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
+	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/server"
@@ -18,16 +20,11 @@ import (
 )
 
 func main() {
-	logger, err := zap.NewDevelopment()
+	conf, err := config.New()
 	if err != nil {
 		panic(err)
 	}
-
-	conf, err := config.New()
-	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
-	}
-	logger.Info("Config loaded", zap.Any("config", conf))
+	logger := newLogger(conf)
 
 	consumer, err := messaging.NewConsumer(logger, conf.KafkaAddresses)
 	if err != nil {
@@ -72,4 +69,17 @@ func main() {
 	}()
 
 	wg.Wait()
+}
+
+// newLogger returns a logger based on the application configuration.
+func newLogger(conf *config.Config) *zap.Logger {
+	encoderConfig := ecszap.NewDefaultEncoderConfig()
+
+	level := zap.DebugLevel
+
+	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
+	logger := zap.New(core, zap.AddCaller())
+	logger = logger.With(zap.String("app", "worker"))
+
+	return logger
 }

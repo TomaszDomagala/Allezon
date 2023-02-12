@@ -25,7 +25,7 @@ DOCKER_REPO ?= "registry.gitlab.com"
 DOCKER_NAMESPACE ?= "registry.gitlab.com/allezon/registry"
 
 # ALLEZON_VERSION sets the version of all docker images and is used during deployment.
-ALLEZON_VERSION ?= "0.2.2"
+ALLEZON_VERSION ?= "0.2.3"
 
 # api service config
 API_VERSION ?= $(ALLEZON_VERSION)
@@ -137,7 +137,7 @@ helm-install: ## Install allezon helm chart.
 
 .PHONY: helm-install-local
 helm-install-local: ## Install allezon helm chart using local setup.
-	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml
+	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall allezon helm chart.
@@ -145,11 +145,11 @@ helm-uninstall: ## Uninstall allezon helm chart.
 
 .PHONY: helm-upgrade
 helm-upgrade: ## Upgrade allezon helm chart.
-	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
+	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 .PHONY: helm-upgrade-local
 helm-upgrade-local: ## Upgrade allezon helm chart using local setup.
-	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml
+	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 # Local deployment targets. This is probably the most useful section of this Makefile.
 # Use local-deploy to deploy allezon locally.
@@ -188,6 +188,16 @@ local-deploy-update-helm: helm-dependency-update helm-upgrade-local ## Update an
 #	@echo "Kibana password: $(shell kubectl get secret --namespace default elasticsearch-master-credentials -o jsonpath='{.data.password}' | base64 --decode)"
 
 ELK_RELEASE_NAME := elk
+ELK_OPERATOR_RELEASE_NAME := elk-operator
+
+
+.PHONY: elk-operator-install
+elk-operator-install: ## Install the operator for the ELK stack.
+	helm install $(ELK_OPERATOR_RELEASE_NAME) $(CHARTS_DIR)/elk-operator
+
+.PHONY: elk-operator-uninstall
+elk-operator-uninstall: ## Delete the operator for the ELK stack.
+	helm uninstall $(ELK_OPERATOR_RELEASE_NAME)
 
 .PHONY: elk-install
 elk-install: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
