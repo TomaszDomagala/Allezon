@@ -1,24 +1,27 @@
 package main
 
 import (
+	"fmt"
+
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/db"
+	"github.com/TomaszDomagala/Allezon/src/pkg/logutils"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/config"
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/server"
 )
 
 func main() {
-	logger, err := zap.NewDevelopment()
+	conf, err := config.New()
 	if err != nil {
 		panic(err)
 	}
-
-	conf, err := config.New()
+	logger, err := logutils.NewLogger("idgetter", conf.LogLevel)
 	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
+		panic(fmt.Errorf("failed to create logger: %w", err))
 	}
+
 	logger.Info("Config loaded: ", zap.Any("config", conf))
 
 	client, err := db.NewClientFromAddresses(conf.DBAddresses)

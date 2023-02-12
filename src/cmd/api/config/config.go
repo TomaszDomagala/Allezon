@@ -7,6 +7,9 @@ type Config struct {
 	Port     int  `mapstructure:"port"`
 	EchoMode bool `mapstructure:"echo_mode"`
 
+	// LogLevel controls the log level of the application.
+	LogLevel string `mapstructure:"log_level"`
+
 	// Kafka options
 	KafkaNullProducer      bool     `mapstructure:"kafka_null_producer"`
 	KafkaAddresses         []string `mapstructure:"kafka_addresses"`
@@ -30,6 +33,8 @@ func field(name string, defaultValue any) {
 func New() (*Config, error) {
 	field("port", 8080)
 	field("echo_mode", false)
+
+	field("log_level", "info")
 
 	field("kafka_null_producer", false)
 	field("kafka_addresses", []string{})

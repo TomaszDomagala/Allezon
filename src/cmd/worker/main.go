@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -12,23 +13,21 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/worker"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
+	"github.com/TomaszDomagala/Allezon/src/pkg/logutils"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/config"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
 )
 
 func main() {
-	logger, err := zap.NewDevelopment()
+	conf, err := config.New()
 	if err != nil {
 		panic(err)
 	}
-
-	conf, err := config.New()
+	logger, err := logutils.NewLogger("worker", conf.LogLevel)
 	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
+		panic(fmt.Errorf("failed to create logger: %w", err))
 	}
-	logger.Info("Config loaded", zap.Any("config", conf))
-
 	consumer, err := messaging.NewConsumer(logger, conf.KafkaAddresses)
 	if err != nil {
 		logger.Fatal("Error while creating producer", zap.Error(err))

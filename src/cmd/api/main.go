@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
+	"github.com/TomaszDomagala/Allezon/src/pkg/logutils"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/server"
@@ -16,14 +18,14 @@ import (
 )
 
 func main() {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
 	conf, err := config.New()
 	if err != nil {
-		logger.Fatal("failed to load config", zap.Error(err))
+		panic(fmt.Errorf("failed to load config: %w", err))
+	}
+
+	logger, err := logutils.NewLogger("api", conf.LogLevel)
+	if err != nil {
+		panic(fmt.Errorf("failed to create logger: %w", err))
 	}
 
 	logger.Info("Initializing messaging", zap.Strings("addresses", conf.KafkaAddresses))

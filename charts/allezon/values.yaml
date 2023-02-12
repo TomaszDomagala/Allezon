@@ -1,6 +1,6 @@
 api:
   image:
-    tag: "0.2.0"
+    tag: "0.2.2"
   replicaCount: 1
   env:
     # Kafka configuration
@@ -25,7 +25,7 @@ api:
 
 worker:
   image:
-    tag: "0.2.0"
+    tag: "0.2.2"
   replicaCount: 1
   env:
     - name: PORT
@@ -39,7 +39,7 @@ worker:
 
 idgetter:
   image:
-    tag: "0.2.0"
+    tag: "0.2.2"
   #  Should always be one, because as far as I understand it is a stateful service.
   replicaCount: 1
   autoscaling:

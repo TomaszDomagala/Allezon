@@ -24,4 +24,4 @@ dependencies:
   repository: https://aerospike.github.io/aerospike-kubernetes
   version: 5.5.0
 digest: sha256:876d5a68dd893f4d09de7f04ca307d3da936f7daff1e7d9c78954e366ce8e443
-generated: "2023-02-09T23:10:29.44131418+01:00"
+generated: "2023-02-11T17:46:46.596574379+01:00"

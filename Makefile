@@ -11,10 +11,13 @@ KIND_SETUP_FILE ?= "kind.setup.yaml"
 KIND_CLUSTER_NAME ?= "allezon-cluster"
 
 # Helm config.
-HELM_CHARTS ?= api allezon idgetter worker ippool
+HELM_CHARTS ?= api allezon idgetter worker ippool elk elk-operator
 HELM_RELEASE_NAME ?= allezon
 
 HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
+
+ELK_RELEASE_NAME := elk
+ELK_OPERATOR_RELEASE_NAME := elk-operator
 
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
 export DOCKER_BUILDKIT = 1
@@ -24,18 +27,21 @@ DOCKER_REPO ?= "registry.gitlab.com"
 
 DOCKER_NAMESPACE ?= "registry.gitlab.com/allezon/registry"
 
+# ALLEZON_VERSION sets the version of all docker images and is used during deployment.
+ALLEZON_VERSION ?= "0.2.3"
+
 # api service config
-API_VERSION ?= "0.2.0"
+API_VERSION ?= $(ALLEZON_VERSION)
 API_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/api"
 API_DOCKERFILE ?= "api.Dockerfile"
 
 # id getter service config
-ID_GETTER_VERSION ?= "0.2.0"
+ID_GETTER_VERSION ?= $(ALLEZON_VERSION)
 ID_GETTER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/idgetter"
 ID_GETTER_DOCKERFILE ?= "id_getter.Dockerfile"
 
 # worker service config
-WORKER_VERSION ?= "0.2.0"
+WORKER_VERSION ?= $(ALLEZON_VERSION)
 WORKER_DOCKER_REPO ?= "$(DOCKER_NAMESPACE)/worker"
 WORKER_DOCKERFILE ?= "worker.Dockerfile"
 
@@ -130,11 +136,11 @@ helm-dependency-update: ## Update all helm dependencies.
 
 .PHONY: helm-install
 helm-install: ## Install allezon helm chart.
-	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
+	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 .PHONY: helm-install-local
 helm-install-local: ## Install allezon helm chart using local setup.
-	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml
+	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall allezon helm chart.
@@ -142,11 +148,11 @@ helm-uninstall: ## Uninstall allezon helm chart.
 
 .PHONY: helm-upgrade
 helm-upgrade: ## Upgrade allezon helm chart.
-	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon
+	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 .PHONY: helm-upgrade-local
 helm-upgrade-local: ## Upgrade allezon helm chart using local setup.
-	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml
+	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon -f $(CHARTS_DIR)/local_deploy.yaml --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
 
 # Local deployment targets. This is probably the most useful section of this Makefile.
 # Use local-deploy to deploy allezon locally.
@@ -161,15 +167,46 @@ local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade-
 .PHONY: local-deploy-update-helm
 local-deploy-update-helm: helm-dependency-update helm-upgrade-local ## Update and install helm charts on already running kind cluster.
 
-
 .PHONY: remote-port-forward
 remote-port-forward: ## Forward the local kind cluster port to the remote VM.
 	ssh -R  $(PORT_FORWARD_REMOTE_PORT):localhost:$(PORT_FORWARD_LOCAL_PORT) -N $(PORT_FORWARD_HOST)
 
+# ELK targets. ELK is a stack of open source products for log management and analysis.
+
+.PHONY: elk-operator-install
+elk-operator-install: ## Install the operator for the ELK stack.
+	helm install $(ELK_OPERATOR_RELEASE_NAME) $(CHARTS_DIR)/elk-operator
+
+.PHONY: elk-operator-uninstall
+elk-operator-uninstall: ## Delete the operator for the ELK stack.
+	helm uninstall $(ELK_OPERATOR_RELEASE_NAME)
+
+.PHONY: elk-install
+elk-install: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
+	helm install $(ELK_RELEASE_NAME) $(CHARTS_DIR)/elk
+
+.PHONY: elk-uninstall
+elk-uninstall: ## Delete ELK stack locally.
+	helm uninstall $(ELK_RELEASE_NAME)
+
+.PHONY: elk-upgrade
+elk-upgrade: ## Upgrade ELK stack locally.
+	helm upgrade $(ELK_RELEASE_NAME) $(CHARTS_DIR)/elk
+
+.PHONY: elk-credentials
+elk-credentials: ## Get Kibana credentials.
+	@echo "Kibana username: elastic"
+	@echo "Kibana password: $(shell kubectl get secret elasticsearch-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')"
+
+.PHONY: elk-port-forward
+elk-port-forward: ## Forward the local kind cluster port to the local machine.
+	@echo "https://localhost:5601"
+	kubectl port-forward svc/kibana-kb-http 5601:5601
+
 # Real cluster deployment targets. These targets are used to deploy allezon to a remote cluster.
 
 .PHONY: cluster-deploy
-cluster-deploy: helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
+cluster-deploy: docker-build docker-push helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
 
 .PHONY: cluster-deploy-update
 cluster-deploy-update: docker-build docker-push helm-dependency-update helm-upgrade ## Update allezon on a remote cluster.
