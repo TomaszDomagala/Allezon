@@ -11,7 +11,7 @@ KIND_SETUP_FILE ?= "kind.setup.yaml"
 KIND_CLUSTER_NAME ?= "allezon-cluster"
 
 # Helm config.
-HELM_CHARTS ?= api allezon idgetter worker ippool elk
+HELM_CHARTS ?= api allezon idgetter worker ippool elk elk-operator
 HELM_RELEASE_NAME ?= allezon
 
 HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
