@@ -203,7 +203,21 @@ elk-port-forward: ## Forward the local kind cluster port to the local machine.
 	@echo "https://localhost:5601"
 	kubectl port-forward svc/kibana-kb-http 5601:5601
 
+
+
 # Real cluster deployment targets. These targets are used to deploy allezon to a remote cluster.
+
+.PHONY: cluster-setup
+cluster-setup:
+	./ssh-reset-all.sh
+	docker build -t kubespray kubespray/
+	./setup-cluster.sh
+	./ubuntu-fix.sh
+	make cluster-mkdirs
+
+.PHONY: cluster-mkdirs
+cluster-mkdirs:
+	./mkdirs.yaml
 
 .PHONY: cluster-deploy
 cluster-deploy: docker-build docker-push helm-dependency-update helm-install ## Deploy allezon to a remote cluster.

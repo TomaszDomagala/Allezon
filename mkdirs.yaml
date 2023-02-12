@@ -1,0 +1,19 @@
+- name: Setup pv folders
+  hosts: all
+
+  tasks:
+    - name: Create redpanda pv folder
+      file:
+        path: /usr/share/redpanda
+        state: directory
+        mode: '0777'
+    - name: Create aerospike pv folder
+      file:
+        path: /usr/share/aerospike
+        state: directory
+        mode: '0777'
+    - name: Create elastic pv folder
+      file:
+        path: /usr/share/elastic
+        state: directory
+        mode: '0777'
