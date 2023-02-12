@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -29,13 +28,12 @@ type Dependencies struct {
 }
 
 type server struct {
-	conf            *config.Config
-	logger          *zap.Logger
-	engine          *gin.Engine
-	producer        messaging.UserTagsProducer
-	db              db.Client
-	idGetter        idGetter.Client
-	userTagsBackoff backoff.BackOff
+	conf     *config.Config
+	logger   *zap.Logger
+	engine   *gin.Engine
+	producer messaging.UserTagsProducer
+	db       db.Client
+	idGetter idGetter.Client
 }
 
 func (s server) Run() error {
@@ -49,20 +47,14 @@ func New(deps Dependencies) Server {
 	router.Use(ginzap.Ginzap(deps.Logger, time.RFC3339, true))
 	router.Use(ginzap.RecoveryWithZap(deps.Logger, true))
 	router.Use(middleware.ExpectationValidator(deps.Logger))
-	bo := backoff.NewExponentialBackOff()
-	bo.InitialInterval = 500 * time.Millisecond
-	bo.Multiplier = 3
-	bo.MaxElapsedTime = time.Minute
-	bo.MaxInterval = 10 * time.Second
 
 	s := server{
-		engine:          router,
-		producer:        deps.Producer,
-		logger:          deps.Logger,
-		conf:            deps.Cfg,
-		db:              deps.DB,
-		idGetter:        deps.IDGetter,
-		userTagsBackoff: bo,
+		engine:   router,
+		producer: deps.Producer,
+		logger:   deps.Logger,
+		conf:     deps.Cfg,
+		db:       deps.DB,
+		idGetter: deps.IDGetter,
 	}
 
 	router.GET("/health", s.health)

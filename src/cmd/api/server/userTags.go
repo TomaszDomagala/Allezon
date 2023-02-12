@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/gin-gonic/gin"
@@ -64,13 +65,19 @@ func (s server) addUserTag(tag *types.UserTag) error {
 }
 
 func (s server) removeOldUserTags(cookie string, action types.Action) {
+	bo := backoff.NewExponentialBackOff()
+	bo.InitialInterval = 500 * time.Millisecond
+	bo.Multiplier = 3
+	bo.MaxElapsedTime = time.Minute
+	bo.MaxInterval = 10 * time.Second
+
 	err := backoff.Retry(func() error {
 		if err := s.db.UserProfiles().RemoveOverLimit(cookie, action, userTagLimit); err != nil {
 			s.logger.Debug("error cleaning user profiles", zap.String("cookie", cookie), zap.Stringer("action", action), zap.Error(err))
 			return err
 		}
 		return nil
-	}, s.userTagsBackoff)
+	}, bo)
 	if err != nil {
 		s.logger.Error("timeout cleaning user profiles", zap.Any("cookie", cookie), zap.Stringer("action", action), zap.Error(err))
 	}
