@@ -6,8 +6,8 @@ type Config struct {
 	// Server options
 	Port int `mapstructure:"port"`
 
-	// LoggerDebugLevel enables debug logging. If false, logs are written at Info level.
-	LoggerDebugLevel bool `mapstructure:"logger_debug_level"`
+	// LogLevel controls the log level of the application.
+	LogLevel string `mapstructure:"log_level"`
 
 	// Kafka options
 	KafkaAddresses []string `mapstructure:"kafka_addresses"`
@@ -27,7 +27,7 @@ func field(name string, defaultValue any) {
 func New() (*Config, error) {
 	field("port", 8080)
 
-	field("logger_debug_level", true)
+	field("log_level", "info")
 
 	field("kafka_addresses", []string{})
 	field("db_addresses", []string{})

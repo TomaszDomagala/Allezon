@@ -3,15 +3,14 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/Shopify/sarama"
-	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
+	"github.com/TomaszDomagala/Allezon/src/pkg/logutils"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/config"
 	"github.com/TomaszDomagala/Allezon/src/cmd/api/server"
@@ -24,7 +23,10 @@ func main() {
 		panic(fmt.Errorf("failed to load config: %w", err))
 	}
 
-	logger := newLogger(conf)
+	logger, err := logutils.NewLogger("api", conf.LogLevel)
+	if err != nil {
+		panic(fmt.Errorf("failed to create logger: %w", err))
+	}
 
 	logger.Info("Initializing messaging", zap.Strings("addresses", conf.KafkaAddresses))
 	err = messaging.Initialize(logger, conf.KafkaAddresses, &sarama.TopicDetail{
@@ -79,20 +81,4 @@ func main() {
 	if err := srv.Run(); err != nil {
 		logger.Fatal("Error while running a server", zap.Error(err))
 	}
-}
-
-// newLogger returns a logger based on the application configuration.
-func newLogger(conf *config.Config) *zap.Logger {
-	encoderConfig := ecszap.NewDefaultEncoderConfig()
-
-	level := zap.InfoLevel
-	if conf.LoggerDebugLevel {
-		level = zap.DebugLevel
-	}
-
-	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
-	logger := zap.New(core, zap.AddCaller())
-	logger = logger.With(zap.String("app", "api"))
-
-	return logger
 }

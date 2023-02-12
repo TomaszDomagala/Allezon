@@ -2,18 +2,18 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
-	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/server"
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/worker"
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
+	"github.com/TomaszDomagala/Allezon/src/pkg/logutils"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/worker/config"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
@@ -24,8 +24,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	logger := newLogger(conf)
-
+	logger, err := logutils.NewLogger("worker", conf.LogLevel)
+	if err != nil {
+		panic(fmt.Errorf("failed to create logger: %w", err))
+	}
 	consumer, err := messaging.NewConsumer(logger, conf.KafkaAddresses)
 	if err != nil {
 		logger.Fatal("Error while creating producer", zap.Error(err))
@@ -69,20 +71,4 @@ func main() {
 	}()
 
 	wg.Wait()
-}
-
-// newLogger returns a logger based on the application configuration.
-func newLogger(conf *config.Config) *zap.Logger {
-	encoderConfig := ecszap.NewDefaultEncoderConfig()
-
-	level := zap.InfoLevel
-	if conf.LoggerDebugLevel {
-		level = zap.DebugLevel
-	}
-
-	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
-	logger := zap.New(core, zap.AddCaller())
-	logger = logger.With(zap.String("app", "worker"))
-
-	return logger
 }

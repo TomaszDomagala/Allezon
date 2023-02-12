@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
+	"fmt"
 
-	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/db"
+	"github.com/TomaszDomagala/Allezon/src/pkg/logutils"
 
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/config"
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/server"
@@ -17,7 +17,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	logger := newLogger(conf)
+	logger, err := logutils.NewLogger("idgetter", conf.LogLevel)
+	if err != nil {
+		panic(fmt.Errorf("failed to create logger: %w", err))
+	}
 
 	logger.Info("Config loaded: ", zap.Any("config", conf))
 
@@ -36,20 +39,4 @@ func main() {
 	if err := srv.Run(); err != nil {
 		logger.Fatal("Error while running a server", zap.Error(err))
 	}
-}
-
-// newLogger returns a logger based on the application configuration.
-func newLogger(conf *config.Config) *zap.Logger {
-	encoderConfig := ecszap.NewDefaultEncoderConfig()
-
-	level := zap.InfoLevel
-	if conf.LoggerDebugLevel {
-		level = zap.DebugLevel
-	}
-
-	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
-	logger := zap.New(core, zap.AddCaller())
-	logger = logger.With(zap.String("app", "idgetter"))
-
-	return logger
 }
