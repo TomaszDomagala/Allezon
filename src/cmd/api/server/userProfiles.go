@@ -18,7 +18,7 @@ import (
 
 type userProfilesRequest struct {
 	TimeRange string `form:"time_range" binding:"required"`
-	Limit     int    `form:"userTagLimit,default=200" binding:"required,gte=0,lte=200"`
+	Limit     int    `form:"limit,default=200" binding:"required,gte=0,lte=200"`
 }
 
 func (s server) userProfilesHandler(c *gin.Context) {
