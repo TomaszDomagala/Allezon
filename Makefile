@@ -28,7 +28,7 @@ DOCKER_REPO ?= "registry.gitlab.com"
 DOCKER_NAMESPACE ?= "registry.gitlab.com/allezon/registry"
 
 # ALLEZON_VERSION sets the version of all docker images and is used during deployment.
-ALLEZON_VERSION ?= "0.2.3"
+ALLEZON_VERSION ?= "0.2.5"
 
 # api service config
 API_VERSION ?= $(ALLEZON_VERSION)
@@ -136,7 +136,11 @@ helm-dependency-update: ## Update all helm dependencies.
 
 .PHONY: helm-install
 helm-install: ## Install allezon helm chart.
-	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
+	helm install $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon \
+  --set api.image.tag=$(API_VERSION) \
+  --set idgetter.image.tag=$(ID_GETTER_VERSION) \
+  --set worker.image.tag=$(WORKER_VERSION) \
+  --set aerospike.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike.conf)
 
 .PHONY: helm-install-local
 helm-install-local: ## Install allezon helm chart using local setup.
@@ -148,7 +152,11 @@ helm-uninstall: ## Uninstall allezon helm chart.
 
 .PHONY: helm-upgrade
 helm-upgrade: ## Upgrade allezon helm chart.
-	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon --set api.image.tag=$(API_VERSION) --set idgetter.image.tag=$(ID_GETTER_VERSION) --set worker.image.tag=$(WORKER_VERSION)
+	helm upgrade $(HELM_RELEASE_NAME) $(CHARTS_DIR)/allezon \
+  --set api.image.tag=$(API_VERSION) \
+  --set idgetter.image.tag=$(ID_GETTER_VERSION) \
+  --set worker.image.tag=$(WORKER_VERSION) \
+  --set aerospike.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike.conf)
 
 .PHONY: helm-upgrade-local
 helm-upgrade-local: ## Upgrade allezon helm chart using local setup.
@@ -228,13 +236,26 @@ cluster-deploy-update: docker-build docker-push helm-dependency-update helm-upgr
 .PHONY: cluster-uninstall
 cluster-uninstall: helm-uninstall ## Uninstall allezon from a remote cluster.
 
-.PHONY: cluster-loadbalancer-ip-install
-cluster-loadbalancer-ip-install: ## Install the LoadBalancer IP address on the remote cluster.
+.PHONY: cluster-ippool-install
+cluster-ippool-install: ## Install the LoadBalancer IP address on the remote cluster.
 	helm install $(HELM_IPPOOL_RELEASE_NAME) $(CHARTS_DIR)/ippool
 
-.PHONE: cluster-loadbalancer-ip-uninstall
-cluster-loadbalancer-ip-uninstall: ## Uninstall the LoadBalancer IP address from the remote cluster.
+.PHONE: cluster-ippool-uninstall
+cluster-ippool-uninstall: ## Uninstall the LoadBalancer IP address from the remote cluster.
 	helm uninstall $(HELM_IPPOOL_RELEASE_NAME)
+
+
+.PHONY: cluster-storage-install
+cluster-storage-install: ## Install the storage class on the remote cluster.
+	helm install allezon-storage $(CHARTS_DIR)/allezon-storage
+
+.PHONY: cluster-storage-uninstall
+cluster-storage-uninstall: ## Uninstall the storage class from the remote cluster.
+	helm uninstall allezon-storage
+
+.PHONY: cluster-storage-upgrade
+cluster-storage-upgrade: ## Upgrade the storage class on the remote cluster.
+	helm upgrade allezon-storage $(CHARTS_DIR)/allezon-storage
 
 # Misc targets.
 

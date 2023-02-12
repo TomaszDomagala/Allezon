@@ -1,11 +1,56 @@
 eck-stack:
   eck-elasticsearch:
     enabled: true
+    version: 8.6.1
     fullnameOverride: elasticsearch
     annotations:
       eck.k8s.elastic.co/license: basic
 
+    nodeSets:
+      - name: default
+        count: 1
+        config:
+          # Comment out when setting the vm.max_map_count via initContainer, as these are mutually exclusive.
+          # For production workloads, it is strongly recommended to increase the kernel setting vm.max_map_count to 262144
+          # and leave node.store.allow_mmap unset.
+          # ref: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-virtual-memory.html
+          #
+
+#          node.store.allow_mmap: false
+        podTemplate:
+          spec:
+            initContainers:
+              - name: sysctl
+                securityContext:
+                  privileged: true
+                  runAsUser: 0
+                command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+              - name: ulimit
+                securityContext:
+                  privileged: true
+                  runAsUser: 0
+                command: ['sh', '-c', 'ulimit -n 65536 -u 4096']
+            containers:
+              - name: elasticsearch
+                resources:
+                  requests:
+                    cpu: 1
+                  limits:
+                    memory: 1Gi
+        volumeClaimTemplates:
+          - metadata:
+              name: elasticsearch-data # Do not change this name unless you set up a volume mount for the data path.
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 5Gi
+              storageClassName: local-storage-elk
+
+
   eck-kibana:
+    version: 8.6.1
     enabled: true
     fullnameOverride: kibana
     annotations:
@@ -47,7 +92,7 @@ eck-stack:
 
     spec:
       type: filebeat
-      version: 8.5.0
+      version: 8.6.1
       elasticsearchRef:
         name: elasticsearch
       kibanaRef:

@@ -55,15 +55,16 @@ redpanda:
   nameOverride: redpanda
   fullnameOverride: redpanda
 
-#  THIS IS EMPTYDIR, NOT PERSISTENT STORAGE
-#  CHANGE IT TO PERSISTENT STORAGE IN REAL DEPLOYMENT
-#  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-cluster-requirements/#storage-volumes
-#  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-best-practices/#storage
-#  https://docs.redpanda.com/docs/manage/kubernetes/configure-storage/
+  #  THIS IS EMPTYDIR, NOT PERSISTENT STORAGE
+  #  CHANGE IT TO PERSISTENT STORAGE IN REAL DEPLOYMENT
+  #  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-cluster-requirements/#storage-volumes
+  #  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-best-practices/#storage
+  #  https://docs.redpanda.com/docs/manage/kubernetes/configure-storage/
   storage:
-    hostPath: ""
     persistentVolume:
-      enabled: false
+      enabled: true
+      storageClass: local-storage-redpanda
+      size: 3Gi
 
 
 aerospike:
@@ -71,3 +72,12 @@ aerospike:
   aerospikeNamespace: "allezon"
   aerospikeNamespaceMemoryGB: "1"
   aerospikeReplicationFactor: "1" # Change to 2 in real deployment.
+
+  persistenceStorage:
+    - enabled: true
+      storageClass: local-storage-aerospike
+      name: aerospike-data-pv
+      mountPath: /opt/aerospike/pv
+      volumeMode: Filesystem
+      accessMode: ReadWriteOnce
+      size: 15Gi
