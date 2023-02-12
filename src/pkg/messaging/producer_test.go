@@ -67,7 +67,7 @@ func (s *MessagingSuite) TearDownTest() {
 }
 
 func (s *MessagingSuite) kafkaAddresses() []string {
-	return []string{s.env.GetService("redpanda").ExposedHostPort()}
+	return []string{containerutils.RedpandaAddr}
 }
 
 func (s *MessagingSuite) newProducer() *Producer {

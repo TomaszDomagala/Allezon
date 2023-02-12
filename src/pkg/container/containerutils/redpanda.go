@@ -2,6 +2,7 @@ package containerutils
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/Shopify/sarama"
 	"github.com/ory/dockertest/v3"
@@ -12,6 +13,7 @@ import (
 )
 
 var (
+	RedpandaAddr           = net.JoinHostPort("localhost", RedpandaHostPort)
 	RedpandaPort           = "29092"
 	RedpandaDockerPort     = docker.Port(RedpandaPort + "/tcp")
 	RedpandaHostPort       = "9092"
@@ -24,10 +26,9 @@ var (
 	RedpandaService = &container.Service{
 		Name: "redpanda",
 		Options: &dockertest.RunOptions{
-			Repository:   "vectorized/redpanda",
-			Tag:          "latest",
-			Hostname:     "redpanda",
-			ExposedPorts: []string{string(RedpandaDockerHostPort)},
+			Repository: "vectorized/redpanda",
+			Tag:        "latest",
+			Hostname:   "redpanda",
 			PortBindings: map[docker.Port][]docker.PortBinding{
 				RedpandaDockerPort:     {{HostIP: "localhost", HostPort: RedpandaPort}},
 				RedpandaDockerHostPort: {{HostIP: "localhost", HostPort: RedpandaHostPort}},
@@ -39,7 +40,7 @@ var (
 			},
 		},
 		OnServicesCreated: func(env *container.Environment, service *container.Service) error {
-			hostport := env.GetService("redpanda").ExposedHostPort()
+			hostport := RedpandaAddr
 
 			// Wait for the service to be ready.
 			env.Logger.Info("waiting for redpanda to start")
