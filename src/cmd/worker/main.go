@@ -75,7 +75,10 @@ func main() {
 func newLogger(conf *config.Config) *zap.Logger {
 	encoderConfig := ecszap.NewDefaultEncoderConfig()
 
-	level := zap.DebugLevel
+	level := zap.InfoLevel
+	if conf.LoggerDebugLevel {
+		level = zap.DebugLevel
+	}
 
 	core := ecszap.NewCore(encoderConfig, os.Stdout, level)
 	logger := zap.New(core, zap.AddCaller())

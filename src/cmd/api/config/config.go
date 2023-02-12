@@ -7,12 +7,8 @@ type Config struct {
 	Port     int  `mapstructure:"port"`
 	EchoMode bool `mapstructure:"echo_mode"`
 
-	// LoggerJSON enables JSON logging. If false, logs are written as console human-readable logs.
-	LoggerJSON bool `mapstructure:"logger_json"`
 	// LoggerDebugLevel enables debug logging. If false, logs are written at Info level.
 	LoggerDebugLevel bool `mapstructure:"logger_debug_level"`
-	// LoggerDevelopment enables development mode.
-	LoggerDevelopment bool `mapstructure:"logger_development"`
 
 	// Kafka options
 	KafkaNullProducer      bool     `mapstructure:"kafka_null_producer"`
@@ -38,9 +34,7 @@ func New() (*Config, error) {
 	field("port", 8080)
 	field("echo_mode", false)
 
-	field("logger_json", true)
 	field("logger_debug_level", true)
-	field("logger_development", false)
 
 	field("kafka_null_producer", false)
 	field("kafka_addresses", []string{})
