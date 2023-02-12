@@ -22,8 +22,8 @@ var (
 	AerospikeService = &container.Service{
 		Name: "aerospike",
 		Options: &dockertest.RunOptions{
-			Repository:   "aerospike",
-			Tag:          "ce-6.2.0.2",
+			Repository:   "aerospike/aerospike-server",
+			Tag:          "5.5.0.7",
 			Hostname:     "aerospike",
 			Mounts:       []string{pathToConfDir() + ":/assets"},
 			ExposedPorts: []string{AerospikeDockerPort},
