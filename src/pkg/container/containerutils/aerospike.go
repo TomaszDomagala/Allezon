@@ -1,8 +1,11 @@
 package containerutils
 
 import (
+	_ "embed"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sync"
 
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/ory/dockertest/v3"
@@ -22,7 +25,7 @@ var (
 			Repository:   "aerospike",
 			Tag:          "ce-6.2.0.2",
 			Hostname:     "aerospike",
-			Mounts:       []string{absPath("./assets") + ":/assets"},
+			Mounts:       []string{pathToConfDir() + ":/assets"},
 			ExposedPorts: []string{AerospikeDockerPort},
 			Cmd:          []string{"--config-file", "/assets/aerospike.conf"},
 		},
@@ -56,10 +59,22 @@ var (
 	}
 )
 
-func absPath(path string) string {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		panic(err)
-	}
-	return abs
+//go:embed assets/aerospike.conf
+var aerospikeConf []byte
+
+var aerospikeConfDir string
+var aerospikeConfOnce sync.Once
+
+func pathToConfDir() string {
+	aerospikeConfOnce.Do(func() {
+		var err error
+		aerospikeConfDir, err = os.MkdirTemp(os.TempDir(), "assets-*")
+		if err != nil {
+			panic(err)
+		}
+		if err := os.WriteFile(filepath.Join(aerospikeConfDir, "aerospike.conf"), aerospikeConf, 0444); err != nil {
+			panic(err)
+		}
+	})
+	return aerospikeConfDir
 }

@@ -24,7 +24,7 @@ func main() {
 
 	logger.Info("Config loaded: ", zap.Any("config", conf))
 
-	client, err := db.NewClientFromAddresses(conf.DBAddresses)
+	client, err := db.NewClientFromAddresses(conf.DBAddresses...)
 	if err != nil {
 		logger.Fatal("Error while creating database client", zap.Error(err))
 	}

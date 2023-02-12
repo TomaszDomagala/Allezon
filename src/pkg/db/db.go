@@ -11,9 +11,6 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
-// AllezonNamespace is the one and only namespace used by Allezon.
-const AllezonNamespace = "allezon"
-
 var KeyNotFoundError = errors.New("key not found")
 var GenerationMismatch = errors.New("generation mismatch")
 

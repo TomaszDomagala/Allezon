@@ -16,6 +16,8 @@ const (
 	// aggregatesSet is the name of the set used for storing aggregates.
 	aggregatesSet = "aggregates"
 
+	aggregatesNamespace = "aggregates"
+
 	aggregatesViewsBin = "views"
 	aggregatesBuysBin  = "buys"
 )
@@ -57,7 +59,7 @@ func decodeSumAndCount(v uint64) (sum uint64, count uint16) {
 
 func (a aggregatesClient) Get(t time.Time, action types.Action) ([]ActionAggregates, error) {
 	var err error
-	key, err := as.NewKey(AllezonNamespace, aggregatesSet, timeToKey(t))
+	key, err := as.NewKey(aggregatesNamespace, aggregatesSet, timeToKey(t))
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +122,7 @@ func (a aggregatesClient) actionToBin(action types.Action) string {
 
 func (a aggregatesClient) Add(aKey AggregateKey, tag types.UserTag) error {
 	name := timeToKey(tag.Time)
-	key, ae := as.NewKey(AllezonNamespace, aggregatesSet, name)
+	key, ae := as.NewKey(aggregatesNamespace, aggregatesSet, name)
 	if ae != nil {
 		return ae
 	}

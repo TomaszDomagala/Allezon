@@ -2,6 +2,7 @@ package containerutils
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/Shopify/sarama"
 	"github.com/ory/dockertest/v3"
@@ -12,6 +13,7 @@ import (
 )
 
 var (
+	RedpandaAddr           = net.JoinHostPort("localhost", RedpandaHostPort)
 	RedpandaPort           = "29092"
 	RedpandaDockerPort     = docker.Port(RedpandaPort + "/tcp")
 	RedpandaHostPort       = "9092"
@@ -31,7 +33,6 @@ var (
 				RedpandaDockerPort:     {{HostIP: "localhost", HostPort: RedpandaPort}},
 				RedpandaDockerHostPort: {{HostIP: "localhost", HostPort: RedpandaHostPort}},
 			},
-
 			Cmd: []string{
 				"redpanda", "start",
 				"--kafka-addr", fmt.Sprintf("PLAINTEXT://0.0.0.0:%s,OUTSIDE://0.0.0.0:%s", RedpandaPort, RedpandaHostPort),
@@ -39,7 +40,7 @@ var (
 			},
 		},
 		OnServicesCreated: func(env *container.Environment, service *container.Service) error {
-			hostport := fmt.Sprintf("localhost:%s", RedpandaHostPort)
+			hostport := RedpandaAddr
 
 			// Wait for the service to be ready.
 			env.Logger.Info("waiting for redpanda to start")

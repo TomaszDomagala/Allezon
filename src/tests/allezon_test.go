@@ -43,7 +43,7 @@ func (s *AllezonIntegrationTestSuite) SetupSuite() {
 	// Build images before running tests.
 	s.logger.Info("building images")
 	s.Require().NoErrorf(containerutils.BuildAPIImage(), "could not build api image")
-	s.Require().NoErrorf(containerutils.BuildWorkerImage(), "could not build aerospike image")
+	s.Require().NoErrorf(containerutils.BuildWorkerImage(), "could not build worker image")
 	s.Require().NoErrorf(containerutils.BuildIDGetterImage(), "could not build idgetter image")
 	s.logger.Info("finished building images")
 }
