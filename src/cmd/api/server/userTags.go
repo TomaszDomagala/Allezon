@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 func (s server) userTagsHandler(c *gin.Context) {
@@ -32,10 +34,7 @@ func (s server) userTagsHandler(c *gin.Context) {
 	var errGrp errgroup.Group
 
 	errGrp.Go(func() error {
-		if _, err := s.db.UserProfiles().Add(userTag); err != nil {
-			return fmt.Errorf("error updating userTags, %w", err)
-		}
-		return nil
+		return s.addUserTag(&userTag)
 	})
 	errGrp.Go(func() error {
 		return s.producer.Send(userTag)
@@ -47,4 +46,32 @@ func (s server) userTagsHandler(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+const userTagLimit = 200
+
+const userTagGCThreshold = int(userTagLimit * float32(1.1))
+
+func (s server) addUserTag(tag *types.UserTag) error {
+	newLen, err := s.db.UserProfiles().Add(tag)
+	if err != nil {
+		return fmt.Errorf("error updating userTags, %w", err)
+	}
+	if newLen > userTagGCThreshold {
+		go s.removeOldUserTags(tag.Cookie, tag.Action)
+	}
+	return nil
+}
+
+func (s server) removeOldUserTags(cookie string, action types.Action) {
+	err := backoff.Retry(func() error {
+		if err := s.db.UserProfiles().RemoveOverLimit(cookie, action, userTagLimit); err != nil {
+			s.logger.Debug("error cleaning user profiles", zap.String("cookie", cookie), zap.Stringer("action", action), zap.Error(err))
+			return err
+		}
+		return nil
+	}, s.userTagsBackoff)
+	if err != nil {
+		s.logger.Error("timeout cleaning user profiles", zap.Any("cookie", cookie), zap.Stringer("action", action), zap.Error(err))
+	}
 }

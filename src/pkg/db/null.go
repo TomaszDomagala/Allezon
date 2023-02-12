@@ -26,7 +26,7 @@ func (n *nullUserProfileClient) Get(cookie string) (UserProfile, error) {
 	return UserProfile{}, nil
 }
 
-func (n *nullUserProfileClient) Add(tag types.UserTag) (int, error) {
+func (n *nullUserProfileClient) Add(tag *types.UserTag) (int, error) {
 	n.logger.Debug("null user profile client invoked", zap.String("method", "Add"), zap.Any("tag", tag))
 	return 0, nil
 }

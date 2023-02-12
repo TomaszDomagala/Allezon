@@ -21,7 +21,7 @@ type userProfileClient struct {
 	l  *zap.Logger
 }
 
-func marshallTag(tag types.UserTag) ([]byte, error) {
+func marshallTag(tag *types.UserTag) ([]byte, error) {
 	return sonic.ConfigFastest.Marshal(tag)
 }
 
@@ -74,7 +74,7 @@ func (u userProfileClient) Get(cookie string) (up UserProfile, err error) {
 	return
 }
 
-func (u userProfileClient) Add(tag types.UserTag) (int, error) {
+func (u userProfileClient) Add(tag *types.UserTag) (int, error) {
 	name := tag.Cookie
 	key, ae := as.NewKey(AllezonNamespace, userProfilesSet, name)
 	if ae != nil {

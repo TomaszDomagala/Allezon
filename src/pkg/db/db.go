@@ -19,7 +19,7 @@ var GenerationMismatch = errors.New("generation mismatch")
 
 type UserProfileClient interface {
 	Get(cookie string) (UserProfile, error)
-	Add(tag types.UserTag) (newLen int, err error)
+	Add(tag *types.UserTag) (newLen int, err error)
 	RemoveOverLimit(cookie string, action types.Action, limit int) error
 }
 

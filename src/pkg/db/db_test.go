@@ -137,12 +137,12 @@ func (s *DBSuite) Test_UserProfiles() {
 	// Insert
 	for _, profile := range profiles {
 		for i, view := range profile.Views {
-			newLen, err := up.Add(view)
+			newLen, err := up.Add(&view)
 			s.Require().NoErrorf(err, "failed to create record")
 			s.Require().Equal(i+1, newLen, "length mismatch")
 		}
 		for i, buy := range profile.Buys {
-			newLen, err := up.Add(buy)
+			newLen, err := up.Add(&buy)
 			s.Require().NoErrorf(err, "failed to create record")
 			s.Require().Equal(i+1, newLen, "length mismatch")
 		}
@@ -174,12 +174,12 @@ func (s *DBSuite) Test_UserProfiles_RemoveOverLimit() {
 
 	// Insert
 	for i, view := range profile.Views {
-		newLen, err := up.Add(view)
+		newLen, err := up.Add(&view)
 		s.Require().NoErrorf(err, "failed to create record")
 		s.Require().Equal(i+1, newLen, "length mismatch")
 	}
 	for i, buy := range profile.Buys {
-		newLen, err := up.Add(buy)
+		newLen, err := up.Add(&buy)
 		s.Require().NoErrorf(err, "failed to create record")
 		s.Require().Equal(i+1, newLen, "length mismatch")
 	}
@@ -224,7 +224,7 @@ func (s *DBSuite) Test_UserProfiles_RemoveOverLimit_Errors() {
 	err := up.RemoveOverLimit(cookieFoo, types.View, 10)
 	s.Require().NoErrorf(err, "error removing")
 
-	l, err := up.Add(types.UserTag{Action: types.Buy, Cookie: cookieFoo, Time: time.Now()})
+	l, err := up.Add(&types.UserTag{Action: types.Buy, Cookie: cookieFoo, Time: time.Now()})
 	s.Require().NoErrorf(err, "error adding key")
 	s.Require().Equal(1, l, "unexpected length")
 
