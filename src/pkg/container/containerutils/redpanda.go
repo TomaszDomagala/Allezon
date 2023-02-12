@@ -24,14 +24,14 @@ var (
 	RedpandaService = &container.Service{
 		Name: "redpanda",
 		Options: &dockertest.RunOptions{
-			Repository: "vectorized/redpanda",
-			Tag:        "latest",
-			Hostname:   "redpanda",
+			Repository:   "vectorized/redpanda",
+			Tag:          "latest",
+			Hostname:     "redpanda",
+			ExposedPorts: []string{string(RedpandaDockerHostPort)},
 			PortBindings: map[docker.Port][]docker.PortBinding{
 				RedpandaDockerPort:     {{HostIP: "localhost", HostPort: RedpandaPort}},
 				RedpandaDockerHostPort: {{HostIP: "localhost", HostPort: RedpandaHostPort}},
 			},
-
 			Cmd: []string{
 				"redpanda", "start",
 				"--kafka-addr", fmt.Sprintf("PLAINTEXT://0.0.0.0:%s,OUTSIDE://0.0.0.0:%s", RedpandaPort, RedpandaHostPort),
@@ -39,7 +39,7 @@ var (
 			},
 		},
 		OnServicesCreated: func(env *container.Environment, service *container.Service) error {
-			hostport := fmt.Sprintf("localhost:%s", RedpandaHostPort)
+			hostport := env.GetService("redpanda").ExposedHostPort()
 
 			// Wait for the service to be ready.
 			env.Logger.Info("waiting for redpanda to start")

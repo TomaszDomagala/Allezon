@@ -2,73 +2,18 @@ package db
 
 import (
 	"encoding/json"
-	"fmt"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"testing"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/nsf/jsondiff"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
+	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
-)
-
-func absPath(path string) string {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		panic(err)
-	}
-	return abs
-}
-
-var (
-	// hostPort is a host:port string that is used to connect to the service.
-	hostPort = "localhost:3000"
-
-	aerospikeService = &container.Service{
-		Name: "aerospike",
-		Options: &dockertest.RunOptions{
-			Repository: "aerospike",
-			Tag:        "ce-6.2.0.2",
-			Hostname:   "aerospike",
-			Mounts:     []string{absPath("./assets") + ":/assets"},
-			PortBindings: map[docker.Port][]docker.PortBinding{
-				"3000/tcp": {{HostIP: "localhost", HostPort: "3000"}},
-				"3001/tcp": {{HostIP: "localhost", HostPort: "3001"}},
-				"3002/tcp": {{HostIP: "localhost", HostPort: "3002"}},
-			},
-			Cmd: []string{"--config-file", "/assets/aerospike.conf"},
-		},
-		OnServicesCreated: func(env *container.Environment, _ *container.Service) error {
-			// Wait for the service to be ready.
-			env.Logger.Info("waiting for aerospike to start")
-			err := env.Pool.Retry(func() error {
-				env.Logger.Debug("checking if aerospike is ready")
-				hosts, err := as.NewHosts(hostPort)
-				if err != nil {
-					return fmt.Errorf("failed to get hosts, %w", err)
-				}
-				_, err = as.NewClientWithPolicyAndHost(nil, hosts...)
-				if err != nil {
-					return fmt.Errorf("failed to create client: %w", err)
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("failed to wait for aerospike: %w", err)
-			}
-			env.Logger.Info("aerospike started")
-
-			return nil
-		},
-	}
 )
 
 // DBSuite is a suite for db integration tests.
@@ -93,7 +38,7 @@ func (s *DBSuite) SetupSuite() {
 }
 
 func (s *DBSuite) SetupTest() {
-	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService}, nil)
+	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{containerutils.AerospikeService}, nil)
 	err := s.env.Run()
 	s.Require().NoErrorf(err, "could not run environment")
 }
@@ -105,6 +50,7 @@ func (s *DBSuite) TearDownTest() {
 }
 
 func (s *DBSuite) newClient() Client {
+	hostPort := s.env.GetService("aerospike").ExposedHostPort()
 	m, err := NewClientFromAddresses(s.logger, hostPort)
 	s.Require().NoErrorf(err, "failed to create client")
 	return m

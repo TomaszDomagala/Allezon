@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sort"
 	"sync"
 	"time"
@@ -14,17 +15,21 @@ import (
 
 var timeout = time.Second * 20
 
-func (s *MessagingSuite) TestNewConsumer() {
-	_, err := NewConsumer(s.logger, []string{hostPort})
+func (s *MessagingSuite) newConsumer() *Consumer {
+	c, err := NewConsumer(s.logger, s.kafkaAddresses())
 	s.Require().NoErrorf(err, "failed to create consumer")
+	return c
+}
+
+func (s *MessagingSuite) TestNewConsumer() {
+	c := s.newConsumer()
+	runtime.KeepAlive(c)
 }
 
 func (s *MessagingSuite) TestConsumer_Consume() {
-	producer, err := NewProducer(s.logger, []string{hostPort})
-	s.Require().NoErrorf(err, "failed to create producer")
+	producer := s.newProducer()
 
-	consumer, err := NewConsumer(s.logger, []string{hostPort})
-	s.Require().NoErrorf(err, "failed to create consumer")
+	consumer := s.newConsumer()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -81,14 +86,11 @@ func (s *MessagingSuite) TestConsumer_Consume_multiple_consumers() {
 	const consumersNum = testTopicPartitionsNumber
 	const tagsToSendNum = 1000
 
-	producer, err := NewProducer(s.logger, []string{hostPort})
-	s.Require().NoErrorf(err, "failed to create producer")
+	producer := s.newProducer()
 
 	var consumers []*Consumer
 	for i := 0; i < consumersNum; i++ {
-		consumer, err := NewConsumer(s.logger, []string{hostPort})
-		s.Require().NoErrorf(err, "failed to create consumer")
-		consumers = append(consumers, consumer)
+		consumers = append(consumers, s.newConsumer())
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -152,9 +154,6 @@ func (s *MessagingSuite) TestConsumer_Consume_multiple_consumers() {
 	cancel()
 	wg.Wait()
 
-	var tagsToSendSet = make(map[string]struct{})
-	var tagsRecSet = make(map[string]struct{})
-
 	// Order is not guaranteed, so we need to sort the slices.
 	sort.Slice(tagsToSend, func(i, j int) bool {
 		return tagsToSend[i].Cookie < tagsToSend[j].Cookie
@@ -162,7 +161,7 @@ func (s *MessagingSuite) TestConsumer_Consume_multiple_consumers() {
 	sort.Slice(tagsRec, func(i, j int) bool {
 		return tagsRec[i].Cookie < tagsRec[j].Cookie
 	})
-	s.Assert().Equalf(tagsToSendSet, tagsRecSet, "received tags do not match sent tags")
+	s.Assert().Equalf(tagsToSend, tagsRec, "received tags do not match sent tags")
 
 	var consumersUsedList []int
 	consumersUsed.Range(func(key, value interface{}) bool {

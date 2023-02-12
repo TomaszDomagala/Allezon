@@ -6,8 +6,6 @@ import (
 
 	as "github.com/aerospike/aerospike-client-go/v6"
 	"github.com/aerospike/aerospike-client-go/v6/types"
-
-	adb "github.com/TomaszDomagala/Allezon/src/pkg/db"
 )
 
 var KeyNotFoundError = errors.New("key not found")
@@ -16,12 +14,14 @@ var ElementExists = errors.New("element exists")
 type Host = as.Host
 type ClientPolicy = as.ClientPolicy
 
+const namespace = "allezon"
+
 type Client interface {
 	GetElements(name string) ([]string, error)
 	AppendElement(name string, el string) (newLen int, err error)
 }
 
-func NewClientFromAddresses(addresses []string) (Client, error) {
+func NewClientFromAddresses(addresses ...string) (Client, error) {
 	hosts, err := as.NewHosts(addresses...)
 	if err != nil {
 		return nil, err
@@ -44,12 +44,12 @@ type client struct {
 // AppendElement appends element to the list of elements for given category, and returns new length of the list.
 // If element already exists in the list, it returns ElementExists error.
 func (c client) AppendElement(category string, element string) (int, error) {
-	key, ae := as.NewKey(adb.AllezonNamespace, set, category)
+	key, ae := as.NewKey(namespace, set, category)
 	if ae != nil {
 		return 0, ae
 	}
 
-	policy := as.NewWritePolicy(0, as.TTLDontExpire)
+	policy := as.NewWritePolicy(0, as.TTLServerDefault)
 	policy.RecordExistsAction = as.UPDATE
 
 	r, createErr := c.cl.Operate(policy, key, as.ListAppendWithPolicyOp(as.NewListPolicy(as.ListOrderUnordered, as.ListWriteFlagsAddUnique), bin, element))
@@ -69,7 +69,7 @@ func (c client) AppendElement(category string, element string) (int, error) {
 
 // GetElements returns all elements for given category.
 func (c client) GetElements(category string) (elements []string, err error) {
-	key, err := as.NewKey(adb.AllezonNamespace, set, category)
+	key, err := as.NewKey(namespace, set, category)
 	if err != nil {
 		return elements, err
 	}

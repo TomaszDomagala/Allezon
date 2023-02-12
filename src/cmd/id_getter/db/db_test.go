@@ -1,68 +1,14 @@
 package db
 
 import (
-	"fmt"
-	"path/filepath"
+	"runtime"
 	"testing"
 
-	as "github.com/aerospike/aerospike-client-go/v6"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
-)
-
-func absPath(path string) string {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		panic(err)
-	}
-	return abs
-}
-
-var (
-	// hostPort is a host:port string that is used to connect to the service.
-	hostPort = "localhost:3000"
-
-	aerospikeService = &container.Service{
-		Name: "aerospike",
-		Options: &dockertest.RunOptions{
-			Repository: "aerospike",
-			Tag:        "ce-6.2.0.2",
-			Hostname:   "aerospike",
-			Mounts:     []string{absPath("./assets") + ":/assets"},
-			PortBindings: map[docker.Port][]docker.PortBinding{
-				"3000/tcp": {{HostIP: "localhost", HostPort: "3000"}},
-				"3001/tcp": {{HostIP: "localhost", HostPort: "3001"}},
-				"3002/tcp": {{HostIP: "localhost", HostPort: "3002"}},
-			},
-			Cmd: []string{"--config-file", "/assets/aerospike.conf"},
-		},
-		OnServicesCreated: func(env *container.Environment, _ *container.Service) error {
-			// Wait for the service to be ready.
-			env.Logger.Info("waiting for aerospike to start")
-			err := env.Pool.Retry(func() error {
-				env.Logger.Debug("checking if aerospike is ready")
-				hosts, err := as.NewHosts(hostPort)
-				if err != nil {
-					return fmt.Errorf("failed to get hosts, %w", err)
-				}
-				_, err = as.NewClientWithPolicyAndHost(nil, hosts...)
-				if err != nil {
-					return fmt.Errorf("failed to create client: %w", err)
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("failed to wait for aerospike: %w", err)
-			}
-			env.Logger.Info("aerospike started")
-
-			return nil
-		},
-	}
+	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 )
 
 // DBSuite is a suite for db integration tests.
@@ -87,7 +33,7 @@ func (s *DBSuite) SetupSuite() {
 }
 
 func (s *DBSuite) SetupTest() {
-	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{aerospikeService}, nil)
+	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{containerutils.AerospikeService}, nil)
 	err := s.env.Run()
 	s.Require().NoErrorf(err, "could not run environment")
 }
@@ -98,19 +44,20 @@ func (s *DBSuite) TearDownTest() {
 	s.env = nil
 }
 
-func (s *DBSuite) TestNewModifier() {
-	_, err := NewClientFromAddresses([]string{hostPort})
+func (s *DBSuite) newClient() Client {
+	hostPort := s.env.GetService("aerospike").ExposedHostPort()
+	cl, err := NewClientFromAddresses(hostPort)
 	s.Require().NoErrorf(err, "failed to create client")
+	return cl
 }
 
-func (s *DBSuite) TestNewGetter() {
-	_, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create getter")
+func (s *DBSuite) TestNewClient() {
+	cl := s.newClient()
+	runtime.KeepAlive(cl)
 }
 
 func (s *DBSuite) Test_Ids() {
-	c, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create client")
+	c := s.newClient()
 
 	const name = "foobar"
 	t := "foo"
@@ -135,13 +82,12 @@ func (s *DBSuite) Test_Ids() {
 }
 
 func (s *DBSuite) Test_Ids_ErrorOnDuplicate() {
-	c, err := NewClientFromAddresses([]string{hostPort})
-	s.Require().NoErrorf(err, "failed to create client")
+	c := s.newClient()
 
 	const name = "foobar"
 	t := "foo"
 
-	_, err = c.AppendElement(name, t)
+	_, err := c.AppendElement(name, t)
 	s.Require().NoErrorf(err, "failed to create record")
 
 	got, err := c.GetElements(name)

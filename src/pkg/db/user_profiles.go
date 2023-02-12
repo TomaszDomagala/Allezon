@@ -12,9 +12,14 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
-const userProfilesSet = "user_profiles"
-const userProfilesViewsBin = "views"
-const userProfilesBuysBin = "buys"
+const (
+	userProfilesNamespace = "allezon"
+
+	userProfilesSet = "user_profiles"
+
+	userProfilesViewsBin = "views"
+	userProfilesBuysBin  = "buys"
+)
 
 type userProfileClient struct {
 	cl *as.Client
@@ -53,7 +58,7 @@ func (u userProfileClient) decodeBin(up *[]types.UserTag, action types.Action, b
 }
 
 func (u userProfileClient) Get(cookie string) (up UserProfile, err error) {
-	key, err := as.NewKey(AllezonNamespace, userProfilesSet, cookie)
+	key, err := as.NewKey(userProfilesNamespace, userProfilesSet, cookie)
 	if err != nil {
 		return UserProfile{}, err
 	}
@@ -76,7 +81,7 @@ func (u userProfileClient) Get(cookie string) (up UserProfile, err error) {
 
 func (u userProfileClient) Add(tag *types.UserTag) (int, error) {
 	name := tag.Cookie
-	key, ae := as.NewKey(AllezonNamespace, userProfilesSet, name)
+	key, ae := as.NewKey(userProfilesNamespace, userProfilesSet, name)
 	if ae != nil {
 		return 0, fmt.Errorf("error creating key %s, %w", name, ae)
 	}
@@ -85,7 +90,7 @@ func (u userProfileClient) Add(tag *types.UserTag) (int, error) {
 		return 0, fmt.Errorf("error marshalling tag %#v, %w", tag, err)
 	}
 
-	policy := as.NewWritePolicy(0, as.TTLDontExpire)
+	policy := as.NewWritePolicy(0, as.TTLServerDefault)
 	policy.RecordExistsAction = as.UPDATE
 
 	binName := u.actionToBin(tag.Action)
@@ -104,12 +109,12 @@ func (u userProfileClient) Add(tag *types.UserTag) (int, error) {
 }
 
 func (u userProfileClient) RemoveOverLimit(cookie string, action types.Action, limit int) error {
-	key, err := as.NewKey(AllezonNamespace, userProfilesSet, cookie)
+	key, err := as.NewKey(userProfilesNamespace, userProfilesSet, cookie)
 	if err != nil {
 		return fmt.Errorf("error creating key %s, %w", cookie, err)
 	}
 
-	sizePolicy := as.NewWritePolicy(0, as.TTLDontExpire)
+	sizePolicy := as.NewWritePolicy(0, as.TTLServerDefault)
 	sizePolicy.RecordExistsAction = as.UPDATE_ONLY
 
 	binName := u.actionToBin(action)
@@ -138,7 +143,7 @@ func (u userProfileClient) RemoveOverLimit(cookie string, action types.Action, l
 		return nil
 	}
 
-	removePolicy := as.NewWritePolicy(r.Generation, as.TTLDontExpire)
+	removePolicy := as.NewWritePolicy(r.Generation, as.TTLServerDefault)
 	removePolicy.RecordExistsAction = as.UPDATE_ONLY
 	removePolicy.GenerationPolicy = as.EXPECT_GEN_EQUAL
 

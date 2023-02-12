@@ -1,15 +1,14 @@
 package messaging
 
 import (
-	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/Shopify/sarama"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
+	"github.com/TomaszDomagala/Allezon/src/pkg/container/containerutils"
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/container"
@@ -17,78 +16,20 @@ import (
 
 const testTopicPartitionsNumber = 4
 
-var (
-	// hostPort is a host:port string that is used to connect to the service.
-	hostPort = "localhost:9092"
-
-	redpandaService = &container.Service{
-		Name: "redpanda",
-		Options: &dockertest.RunOptions{
-			Repository:   "vectorized/redpanda",
-			Tag:          "latest",
-			Hostname:     "redpanda",
-			PortBindings: map[docker.Port][]docker.PortBinding{"9092/tcp": {{HostIP: "localhost", HostPort: "9092"}}},
-		},
-		OnServicesCreated: func(env *container.Environment, _ *container.Service) error {
-			// Wait for the service to be ready.
-			env.Logger.Info("waiting for redpanda to start")
-			err := env.Pool.Retry(func() error {
-				return redpandaHearthCheck(env)
-			})
-			if err != nil {
-				return fmt.Errorf("failed to wait for redpanda: %w", err)
-			}
-			env.Logger.Info("redpanda started")
-
-			err = createTestTopic(env)
-			if err != nil {
-				return fmt.Errorf("failed to create test topic: %w", err)
-			}
-			return nil
-		},
-	}
-)
-
-// redpandaHearthCheck checks if redpanda is ready to accept connections.
-func redpandaHearthCheck(env *container.Environment) error {
-	env.Logger.Debug("checking if redpanda is ready")
-	client, err := sarama.NewClient([]string{hostPort}, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	defer func() {
-		err := client.Close()
-		if err != nil {
-			env.Logger.Error("failed to close client", zap.Error(err))
-		}
-	}()
-	_, err = client.Controller()
-	if err != nil {
-		return fmt.Errorf("failed to get controller: %w", err)
-	}
-
-	return nil
-}
-
-func createTestTopic(env *container.Environment) error {
-	admin, err := sarama.NewClusterAdmin([]string{hostPort}, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
+func (s *MessagingSuite) createTestTopic() {
+	admin, err := sarama.NewClusterAdmin(s.kafkaAddresses(), nil)
+	s.Require().NoErrorf(err, "failed to create client")
 	defer func() {
 		err := admin.Close()
 		if err != nil {
-			env.Logger.Error("failed to close admin", zap.Error(err))
+			s.env.Logger.Error("failed to close admin", zap.Error(err))
 		}
 	}()
 	err = admin.CreateTopic(UserTagsTopic, &sarama.TopicDetail{
 		NumPartitions:     testTopicPartitionsNumber,
 		ReplicationFactor: 1,
 	}, false)
-	if err != nil {
-		return fmt.Errorf("failed to create topic: %w", err)
-	}
-	return nil
+	s.Require().NoErrorf(err, "failed to create topic")
 }
 
 // MessagingSuite is a suite for messaging integration tests.
@@ -113,9 +54,10 @@ func (s *MessagingSuite) SetupSuite() {
 }
 
 func (s *MessagingSuite) SetupTest() {
-	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{redpandaService}, nil)
+	s.env = container.NewEnvironment(s.T().Name(), s.logger, []*container.Service{containerutils.RedpandaService}, nil)
 	err := s.env.Run()
 	s.Require().NoErrorf(err, "could not run environment")
+	s.createTestTopic()
 }
 
 func (s *MessagingSuite) TearDownTest() {
@@ -124,24 +66,33 @@ func (s *MessagingSuite) TearDownTest() {
 	s.env = nil
 }
 
-func (s *MessagingSuite) TestNewProducer() {
-	_, err := NewProducer(s.logger, []string{hostPort})
+func (s *MessagingSuite) kafkaAddresses() []string {
+	return []string{s.env.GetService("redpanda").ExposedHostPort()}
+}
+
+func (s *MessagingSuite) newProducer() *Producer {
+	p, err := NewProducer(s.logger, s.kafkaAddresses())
 	s.Require().NoErrorf(err, "failed to create producer")
+	return p
+}
+
+func (s *MessagingSuite) TestNewProducer() {
+	p := s.newProducer()
+	runtime.KeepAlive(p)
 }
 
 func (s *MessagingSuite) TestProducer_Send() {
-	producer, err := NewProducer(s.logger, []string{hostPort})
-	s.Require().NoErrorf(err, "failed to create producer")
+	producer := s.newProducer()
 
 	tag := types.UserTag{
 		Device: types.Pc,
 		Action: types.View,
 	}
 
-	err = producer.Send(tag)
+	err := producer.Send(tag)
 	s.Assert().NoErrorf(err, "failed to send message")
 
-	client, err := sarama.NewClient([]string{hostPort}, nil)
+	client, err := sarama.NewClient(s.kafkaAddresses(), nil)
 	s.Require().NoErrorf(err, "failed to create client")
 	partitions, err := client.Partitions(UserTagsTopic)
 	s.Require().NoErrorf(err, "failed to get partitions")
