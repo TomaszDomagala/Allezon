@@ -16,6 +16,9 @@ HELM_RELEASE_NAME ?= allezon
 
 HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
 
+ELK_RELEASE_NAME := elk
+ELK_OPERATOR_RELEASE_NAME := elk-operator
+
 # DOCKER_BUILDKIT=1 is required to use the --mount option during docker build.
 export DOCKER_BUILDKIT = 1
 
@@ -164,32 +167,11 @@ local-deploy-update: docker-build kind-load helm-dependency-update helm-upgrade-
 .PHONY: local-deploy-update-helm
 local-deploy-update-helm: helm-dependency-update helm-upgrade-local ## Update and install helm charts on already running kind cluster.
 
-# This helm charts are using elastic repo: https://helm.elastic.co
-#.PHONY: local-deploy-elk
-#local-deploy-elk: ## Deploy ELK stack locally. This target assumes that you have already deployed allezon locally.
-#	helm install elasticsearch elastic/elasticsearch -f $(CHARTS_DIR)/elastic.yaml
-#	helm install kibana elastic/kibana
-#	helm install filebeat elastic/filebeat
-#	#helm install logstash elastic/logstash
-#
-#.PHONE: local-deploy-elk-delete
-#local-deploy-elk-delete: ## Delete ELK stack locally.
-#	-helm delete filebeat
-#	-helm delete kibana
-#	-helm delete elasticsearch
-#
-#.PHONY: kibana-port-forward
-#kibana-port-forward: ## Forward the local kind cluster port to the local machine.
-#	kubectl port-forward svc/kibana-kibana 5601:5601
-#
-#.PHONY: kibana-credentials
-#kibana-credentials: ## Get Kibana credentials.
-#	@echo "Kibana username: elastic"
-#	@echo "Kibana password: $(shell kubectl get secret --namespace default elasticsearch-master-credentials -o jsonpath='{.data.password}' | base64 --decode)"
+.PHONY: remote-port-forward
+remote-port-forward: ## Forward the local kind cluster port to the remote VM.
+	ssh -R  $(PORT_FORWARD_REMOTE_PORT):localhost:$(PORT_FORWARD_LOCAL_PORT) -N $(PORT_FORWARD_HOST)
 
-ELK_RELEASE_NAME := elk
-ELK_OPERATOR_RELEASE_NAME := elk-operator
-
+# ELK targets. ELK is a stack of open source products for log management and analysis.
 
 .PHONY: elk-operator-install
 elk-operator-install: ## Install the operator for the ELK stack.
@@ -220,10 +202,6 @@ elk-credentials: ## Get Kibana credentials.
 elk-port-forward: ## Forward the local kind cluster port to the local machine.
 	@echo "https://localhost:5601"
 	kubectl port-forward svc/kibana-kb-http 5601:5601
-
-.PHONY: remote-port-forward
-remote-port-forward: ## Forward the local kind cluster port to the remote VM.
-	ssh -R  $(PORT_FORWARD_REMOTE_PORT):localhost:$(PORT_FORWARD_LOCAL_PORT) -N $(PORT_FORWARD_HOST)
 
 # Real cluster deployment targets. These targets are used to deploy allezon to a remote cluster.
 
