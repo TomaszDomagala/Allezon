@@ -225,7 +225,7 @@ cluster-setup:
 
 .PHONY: cluster-mkdirs
 cluster-mkdirs:
-	./mkdirs.yaml
+	./mkdirs.sh
 
 .PHONY: cluster-deploy
 cluster-deploy: docker-build docker-push helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
