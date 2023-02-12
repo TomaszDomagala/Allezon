@@ -13,41 +13,79 @@ eck-stack:
 
   eck-beats:
     enabled: true
+    fullnameOverride: filebeat
     annotations:
       eck.k8s.elastic.co/license: basic
-    fullnameOverride: filebeat
+
+    serviceAccount:
+      name: filebeat
+
+    clusterRole:
+      name: filebeat
+      rules:
+        - apiGroups: [""]
+          resources:
+            - namespaces
+            - pods
+            - nodes
+          verbs:
+            - get
+            - list
+            - watch
+
+    clusterRoleBinding:
+      name: filebeat
+      subjects:
+        - kind: ServiceAccount
+          name: filebeat
+          namespace: default
+      roleRef:
+        kind: ClusterRole
+        name: filebeat
+        apiGroup: rbac.authorization.k8s.io
+
+
     spec:
       type: filebeat
-      version: 7.15.0
+      version: 8.5.0
       elasticsearchRef:
         name: elasticsearch
       kibanaRef:
         name: kibana
       config:
         filebeat:
-          inputs:
-            - type: container
-              paths:
-                - /var/log/containers/*.log
-#          autodiscover:
-#            providers:
-#              - type: kubernetes
-#                hints.enabled: true
-#        processors:
-#          - add_kubernetes_metadata:
-#              default_indexers.enabled: true
-#              default_matchers.enabled: true
+#          inputs:
+#            - type: container
+#              paths:
+#                - /var/log/containers/*.log
+          autodiscover:
+            providers:
+              - type: kubernetes
+                node: ${NODE_NAME}
+                hints:
+                  enabled: true
+                  default_config:
+                    type: container
+                    paths:
+                      - /var/log/containers/*${data.kubernetes.container.id}.log
+        processors:
+          - add_cloud_metadata: {}
+          - add_host_metadata: {}
 
       daemonSet:
         podTemplate:
           spec:
+            serviceAccountName: filebeat
+            automountServiceAccountToken: true
+            terminationGracePeriodSeconds: 30
             dnsPolicy: ClusterFirstWithHostNet
-            hostNetwork: true
-#            automountServiceAccountToken: true
-            securityContext:
-              runAsUser: 0
+            hostNetwork: true # Allows to provide richer host metadata
             containers:
               - name: filebeat
+                securityContext:
+                  runAsUser: 0
+                  # If using Red Hat OpenShift uncomment this:
+                  #privileged: true
                 volumeMounts:
                   - name: varlogcontainers
                     mountPath: /var/log/containers
@@ -55,6 +93,11 @@ eck-stack:
                     mountPath: /var/log/pods
                   - name: varlibdockercontainers
                     mountPath: /var/lib/docker/containers
+                env:
+                  - name: NODE_NAME
+                    valueFrom:
+                      fieldRef:
+                        fieldPath: spec.nodeName
             volumes:
               - name: varlogcontainers
                 hostPath:
@@ -68,55 +111,3 @@ eck-stack:
 
 
 
-
-#  eck-beats:
-#    enabled: true
-#    annotations:
-#      eck.k8s.elastic.co/license: basic
-#    name: filebeat
-#    spec:
-#      type: filebeat
-#      elasticsearchRef:
-#        name: elasticsearch
-#      kibanaRef:
-#        name: kibana
-#      config:
-#        filebeat:
-#          inputs:
-#            - type: container
-#              paths:
-#                - /var/log/containers/*.log
-#              processors:
-#                - add_kubernetes_metadata:
-#                    host: ${NODE_NAME}
-#                    matchers:
-#                      - logs_path:
-#                          logs_path: "/var/log/containers/"
-#
-#          autodiscover:
-#            providers:
-#              - node: ${NODE_NAME}
-#                hints:
-#                  enabled: true
-#                  default_config:
-#                    type: container
-#                    paths:
-#                      - /var/log/containers/*${data.kubernetes.container.id}.log
-#      daemonSet:
-#        podTemplate:
-#          spec:
-#            serviceAccountName: filebeat-service-account
-#            automountServiceAccountToken: true
-#            containers:
-#              - name: filebeat
-#                env:
-#                  - name: NODE_NAME
-#                    valueFrom:
-#                      fieldRef:
-#                        fieldPath: spec.nodeName
-#            volumes:
-#              - name: beat-data
-#                emptyDir: {}
-#
-#    serviceAccount:
-#      name: filebeat-service-account
