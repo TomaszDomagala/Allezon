@@ -61,15 +61,15 @@ func (a aggregatesClient) Get(t time.Time, action types.Action) ([]ActionAggrega
 	if err != nil {
 		return nil, err
 	}
-	r, err := a.cl.Get(nil, key, aggregatesViewsBin, aggregatesBuysBin)
+
+	binName := a.actionToBin(action)
+	r, err := a.cl.Get(nil, key, binName)
 	if err != nil {
 		if errors.Is(err, as.ErrKeyNotFound) {
 			return nil, fmt.Errorf("aggregates for minute %s not found, %w", timeToKey(t), KeyNotFoundError)
 		}
 		return nil, fmt.Errorf("failed to get aggregates, %w", err)
 	}
-
-	binName := a.actionToBin(action)
 	raw, ok := r.Bins[binName]
 	if !ok {
 		return nil, nil

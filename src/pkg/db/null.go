@@ -16,14 +16,19 @@ type nullUserProfileClient struct {
 	logger *zap.Logger
 }
 
-func (n *nullUserProfileClient) Get(cookie string) (GetResult[UserProfile], error) {
-	n.logger.Debug("null user profile client invoked", zap.String("method", "Get"), zap.String("cookie", cookie))
-	return GetResult[UserProfile]{}, nil
+func (n *nullUserProfileClient) RemoveOverLimit(cookie string, action types.Action, limit int) error {
+	n.logger.Debug("null user profile client invoked", zap.String("method", "RemoveOverLimit"), zap.String("cookie", cookie), zap.String("action", action.String()), zap.Int("limit", limit))
+	return nil
 }
 
-func (n *nullUserProfileClient) Update(cookie string, userProfile UserProfile, generation Generation) error {
-	n.logger.Debug("null user profile client invoked", zap.String("method", "Update"), zap.String("cookie", cookie), zap.Any("userProfile", userProfile), zap.Uint32("generation", uint32(generation)))
-	return nil
+func (n *nullUserProfileClient) Get(cookie string) (UserProfile, error) {
+	n.logger.Debug("null user profile client invoked", zap.String("method", "Get"), zap.String("cookie", cookie))
+	return UserProfile{}, nil
+}
+
+func (n *nullUserProfileClient) Add(tag *types.UserTag) (int, error) {
+	n.logger.Debug("null user profile client invoked", zap.String("method", "Add"), zap.Any("tag", tag))
+	return 0, nil
 }
 
 type nullAggregatesClient struct {

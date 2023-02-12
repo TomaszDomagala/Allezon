@@ -37,9 +37,7 @@ var numProcessors = runtime.NumCPU()
 
 func (w worker) Run(ctx context.Context) error {
 	tagsChan := make(chan types.UserTag, chanSize)
-	aggregatesChan := make(chan types.UserTag, chanSize)
 	defer close(tagsChan)
-	defer close(aggregatesChan)
 
 	for i := 0; i < numProcessors; i++ {
 		go runAggregatesProcessor(tagsChan, w.idGetter, w.db.Aggregates(), w.logger)

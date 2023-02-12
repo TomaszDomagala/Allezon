@@ -17,18 +17,14 @@ const AllezonNamespace = "allezon"
 var KeyNotFoundError = errors.New("key not found")
 var GenerationMismatch = errors.New("generation mismatch")
 
-type Generation = uint32
-
-type GetResult[T any] struct {
-	Generation Generation
-	Result     T
-}
-
 type UserProfileClient interface {
-	Get(cookie string) (GetResult[UserProfile], error)
-	Update(cookie string, userProfile UserProfile, generation Generation) error
+	Get(cookie string) (UserProfile, error)
+	Add(tag *types.UserTag) (newLen int, err error)
+	RemoveOverLimit(cookie string, action types.Action, limit int) error
 }
 
+// UserProfile holds data about users views and buys.
+// Tags are sorted in ascending order relative to time.
 type UserProfile struct {
 	Views []types.UserTag
 	Buys  []types.UserTag

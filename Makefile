@@ -48,6 +48,8 @@ PORT_FORWARD_HOST ?= "rtb1"
 
 .PHONY: test
 test: ## Run go tests.
+	# Clean test cache as docker tests do not cache properly.
+	go clean -testcache
 	cd $(SRC_DIR) && go test -v ./...
 
 .PHONY: lint
@@ -170,7 +172,7 @@ remote-port-forward: ## Forward the local kind cluster port to the remote VM.
 cluster-deploy: helm-dependency-update helm-install ## Deploy allezon to a remote cluster.
 
 .PHONY: cluster-deploy-update
-cluster-deploy-update: helm-dependency-update helm-upgrade ## Update allezon on a remote cluster.
+cluster-deploy-update: docker-build docker-push helm-dependency-update helm-upgrade ## Update allezon on a remote cluster.
 
 .PHONY: cluster-uninstall
 cluster-uninstall: helm-uninstall ## Uninstall allezon from a remote cluster.
