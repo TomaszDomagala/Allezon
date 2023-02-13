@@ -295,10 +295,12 @@ func (s *DBSuite) Test_Aggregates_ReturnsKeyNotFoundErrorOnKeyNotFound() {
 	a := m.Aggregates()
 	min := time.Now()
 
-	_, err := a.Get(min, types.View)
-	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
-	_, err = a.Get(min, types.Buy)
-	s.Require().ErrorIs(err, KeyNotFoundError, "expected KeyNotFoundError")
+	agg, err := a.Get(min, types.View)
+	s.Require().NoErrorf(err, "error getting from the database")
+	s.Require().Zero(agg, "expected no results")
+	agg, err = a.Get(min, types.Buy)
+	s.Require().NoErrorf(err, "error getting from the database")
+	s.Require().Zero(agg, "expected no results")
 }
 
 func (s *DBSuite) Test_Aggregates_MinuteRounding() {
@@ -352,12 +354,16 @@ func (s *DBSuite) Test_Aggregates_MinuteRounding() {
 	res = s.getAggregates(a, min.Add(time.Minute-time.Nanosecond))
 	s.compareAggregates(t, res)
 
-	_, err = a.Get(min.Add(-time.Nanosecond), types.View)
-	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
-	_, err = a.Get(min.Add(-time.Nanosecond), types.Buy)
-	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
-	_, err = a.Get(min.Add(time.Minute), types.View)
-	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
-	_, err = a.Get(min.Add(time.Minute), types.Buy)
-	s.Require().ErrorIs(err, KeyNotFoundError, "error getting from the database")
+	agg, err := a.Get(min.Add(-time.Nanosecond), types.View)
+	s.Require().NoErrorf(err, "error getting from the database")
+	s.Require().Zero(agg, "expected no results")
+	agg, err = a.Get(min.Add(-time.Nanosecond), types.Buy)
+	s.Require().NoErrorf(err, "error getting from the database")
+	s.Require().Zero(agg, "expected no results")
+	agg, err = a.Get(min.Add(time.Minute), types.View)
+	s.Require().NoErrorf(err, "error getting from the database")
+	s.Require().Zero(agg, "expected no results")
+	agg, err = a.Get(min.Add(time.Minute), types.Buy)
+	s.Require().NoErrorf(err, "error getting from the database")
+	s.Require().Zero(agg, "expected no results")
 }

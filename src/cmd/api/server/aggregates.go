@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -116,14 +115,11 @@ func (s server) aggregates(aggregates []types.Aggregate, params fetchParams) (dt
 	res := newAggregatesResponseBuilder(aggregates, params)
 	for t := params.from; t.Before(params.to); t = t.Add(time.Minute) {
 		aggs, err := s.db.Aggregates().Get(t, params.action)
-		var sum, count uint64
 		if err != nil {
-			if !errors.Is(err, db.KeyNotFoundError) {
-				return dto.AggregatesDTO{}, fmt.Errorf("error getting aggregates for time %s, %w", t, err)
-			}
-		} else {
-			sum, count = s.filterAggregates(aggs, f)
+			return dto.AggregatesDTO{}, fmt.Errorf("error getting aggregates for time %s, %w", t, err)
 		}
+		sum, count := s.filterAggregates(aggs, f)
+
 		res.appendAggregates(t, sum, count)
 	}
 
