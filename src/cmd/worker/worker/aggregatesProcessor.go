@@ -26,11 +26,11 @@ var aggregatesBackoff = backoff.ExponentialBackOff{
 
 func runAggregatesProcessor(tagsChan <-chan types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, logger *zap.Logger) {
 	for tag := range tagsChan {
-		logger.Debug("[A] processing tag", zap.Any("tag", tag))
+		logger.Debug("processing tag", zap.Any("tag", tag))
 		if err := updateAggregatesBackoff(tag, idsClient, aggregates, aggregatesBackoff, logger); err != nil {
 			logger.Error("error updating aggregates", zap.Error(err))
 		}
-		logger.Debug("[A] processed tag", zap.Any("tag", tag))
+		logger.Debug("processed tag", zap.Any("tag", tag))
 	}
 }
 
@@ -38,7 +38,7 @@ func runAggregatesProcessor(tagsChan <-chan types.UserTag, idsClient idGetter.Cl
 func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, bo backoff.ExponentialBackOff, logger *zap.Logger) error {
 	err := backoff.Retry(func() error {
 		if err := updateAggregates(tag, idsClient, aggregates); err != nil {
-			logger.Debug("[A] error processing tag", zap.Any("tag", tag), zap.Error(err))
+			logger.Warn("error processing tag", zap.Any("tag", tag), zap.Error(err))
 			return err
 		}
 		return nil

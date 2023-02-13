@@ -18,7 +18,7 @@ import (
 
 type userProfilesRequest struct {
 	TimeRange string `form:"time_range" binding:"required"`
-	Limit     int    `form:"limit,default=200" binding:"required,gte=0,lte=200"`
+	Limit     *int   `form:"limit,default=200" binding:"required,gte=0,lte=200"`
 }
 
 func (s server) userProfilesHandler(c *gin.Context) {
@@ -37,7 +37,7 @@ func (s server) userProfilesHandler(c *gin.Context) {
 	cookie := c.Param("cookie")
 	s.logger.Debug("parsed", zap.String("cookie", cookie), zap.Time("from", from), zap.Time("to", to))
 
-	resp, err := s.userProfiles(cookie, from, to, req.Limit)
+	resp, err := s.userProfiles(cookie, from, to, *req.Limit)
 	if err != nil {
 		s.logger.Error("error handling user profiles", zap.Error(err))
 		_ = c.AbortWithError(http.StatusInternalServerError, err)

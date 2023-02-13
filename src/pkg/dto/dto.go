@@ -24,7 +24,7 @@ type UserTagDTO struct {
 
 // ProductInfo is a data transfer object for types.ProductInfo.
 type ProductInfo struct {
-	ProductID  int    `json:"product_id" binding:"required"`
+	ProductID  *int   `json:"product_id" binding:"required"`
 	BrandID    string `json:"brand_id" binding:"required"`
 	CategoryID string `json:"category_id" binding:"required"`
 	Price      uint32 `json:"price" binding:"required"`
@@ -65,7 +65,7 @@ func FromUserTagDTO(dto UserTagDTO) (types.UserTag, error) {
 		Action:  action,
 		Origin:  dto.Origin,
 		ProductInfo: types.ProductInfo{
-			ProductId:  dto.ProductInfo.ProductID,
+			ProductId:  *dto.ProductInfo.ProductID,
 			BrandId:    dto.ProductInfo.BrandID,
 			CategoryId: dto.ProductInfo.CategoryID,
 			Price:      dto.ProductInfo.Price,
@@ -83,7 +83,7 @@ func IntoUserTagDTO(tag types.UserTag) UserTagDTO {
 		Action:  tag.Action.String(),
 		Origin:  tag.Origin,
 		ProductInfo: ProductInfo{
-			ProductID:  tag.ProductInfo.ProductId,
+			ProductID:  &tag.ProductInfo.ProductId,
 			BrandID:    tag.ProductInfo.BrandId,
 			CategoryID: tag.ProductInfo.CategoryId,
 			Price:      tag.ProductInfo.Price,
