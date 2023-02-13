@@ -1,7 +1,7 @@
 api:
   image:
     tag: "0.2.2"
-  replicaCount: 1
+  replicaCount: 3
   env:
     # Kafka configuration
     - name: KAFKA_NULL_PRODUCER
@@ -9,14 +9,14 @@ api:
     - name: KAFKA_ADDRESSES
       value: "allezon-redpanda-0.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-1.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-2.allezon-redpanda.default.svc.cluster.local:9093"
     - name: KAFKA_NUM_PARTITIONS
-      value: "1"
+      value: "3"
     - name: KAFKA_REPLICATION_FACTOR
-      value: "1"
+      value: "3"
     # Database configuration
     - name: DB_NULL_CLIENT
       value: "false"
     - name: DB_ADDRESSES
-      value: "allezon-aerospike.default.svc.cluster.local:3000"
+      value: "allezon-aerospike-0.allezon-aerospike.default.svc.cluster.local:3000,allezon-aerospike-1.allezon-aerospike.default.svc.cluster.local:3000,allezon-aerospike-2.allezon-aerospike.default.svc.cluster.local:3000"
     # ID Getter configuration
     - name: ID_GETTER_NULL_CLIENT
       value: "false"
@@ -26,52 +26,47 @@ api:
 worker:
   image:
     tag: "0.2.2"
-  replicaCount: 1
+  replicaCount: 3
   env:
     - name: PORT
       value: "8080"
     - name: KAFKA_ADDRESSES
       value: "allezon-redpanda-0.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-1.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-2.allezon-redpanda.default.svc.cluster.local:9093"
     - name: DB_ADDRESSES
-      value: "allezon-aerospike.default.svc.cluster.local:3000"
+      value: "allezon-aerospike-0.allezon-aerospike.default.svc.cluster.local:3000,allezon-aerospike-1.allezon-aerospike.default.svc.cluster.local:3000,allezon-aerospike-2.allezon-aerospike.default.svc.cluster.local:3000"
     - name: ID_GETTER_ADDRESS
       value: "allezon-idgetter.default.svc.cluster.local:8080"
 
 idgetter:
   image:
     tag: "0.2.2"
-  #  Should always be one, because as far as I understand it is a stateful service.
   replicaCount: 1
   autoscaling:
     enabled: false
   env:
     - name: DB_ADDRESSES
-      value: "allezon-aerospike.default.svc.cluster.local:3000"
+      value: "allezon-aerospike-0.allezon-aerospike.default.svc.cluster.local:3000,allezon-aerospike-1.allezon-aerospike.default.svc.cluster.local:3000,allezon-aerospike-2.allezon-aerospike.default.svc.cluster.local:3000"
 
 
 redpanda:
   statefulset:
-    replicas: 1
+    replicas: 3
   nameOverride: redpanda
   fullnameOverride: redpanda
 
-  #  THIS IS EMPTYDIR, NOT PERSISTENT STORAGE
-  #  CHANGE IT TO PERSISTENT STORAGE IN REAL DEPLOYMENT
-  #  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-cluster-requirements/#storage-volumes
-  #  https://docs.redpanda.com/docs/deploy/deployment-option/self-hosted/kubernetes/kubernetes-best-practices/#storage
-  #  https://docs.redpanda.com/docs/manage/kubernetes/configure-storage/
   storage:
     persistentVolume:
       enabled: true
       storageClass: local-storage-redpanda
       size: 3Gi
 
+  config:
+    cluster:
+      retention_bytes: 3000000
+
 
 aerospike:
-  dbReplicas: 1 # Change to 3 in real deployment.
-  aerospikeNamespace: "allezon"
-  aerospikeNamespaceMemoryGB: "1"
-  aerospikeReplicationFactor: "1" # Change to 2 in real deployment.
+  dbReplicas: 3 # Change to 3 in real deployment.
 
   persistenceStorage:
     - enabled: true

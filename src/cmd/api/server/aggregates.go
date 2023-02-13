@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
@@ -74,7 +76,7 @@ func validateAggregatesTimeRange(from, to time.Time) error {
 		return fmt.Errorf("from is before to")
 	}
 	if to.Sub(from) > 10*time.Minute {
-		return fmt.Errorf("timerange is larger than 10 minutes")
+		return fmt.Errorf("time range is larger than 10 minutes")
 	}
 	if from.Second() > 0 {
 		return fmt.Errorf("from is not second aligned")
@@ -188,7 +190,7 @@ func newAggregatesResponseBuilder(aggregates []types.Aggregate, params fetchPara
 		res.columns = append(res.columns, "category_id")
 	}
 	for _, a := range aggregates {
-		res.columns = append(res.columns, a.String())
+		res.columns = append(res.columns, strings.ToLower(a.String()))
 	}
 
 	res.aggs = aggregates
@@ -210,6 +212,7 @@ func (s server) newFilters(origin, brandId, categoryId *string) (f filters, err 
 	if err != nil {
 		return filters{}, err
 	}
+	s.logger.Debug("filters initialized", zap.Uint16p("originId", f.originId), zap.Uint16p("categoryId", f.categoryId), zap.Uint16p("brandId", f.brandId))
 	return f, nil
 }
 
@@ -217,7 +220,7 @@ func (s server) getId(collection string, elementPtr *string) (*uint16, error) {
 	if elementPtr == nil {
 		return nil, nil
 	}
-	id, err := idGetter.GetU16ID(s.idGetter, collection, *elementPtr)
+	id, err := idGetter.GetU16ID(s.idGetter, collection, *elementPtr, false)
 	if err != nil {
 		return nil, fmt.Errorf("error getting %s id of filter, %w", collection, err)
 	}

@@ -1,16 +1,41 @@
 storage:
-  - persistentVolumeName: aerospike-pv
+  - persistentVolumeName: aerospike-pv-1
+    storageClassName: local-storage-aerospike
+    nodeHostName: node2
+    capacity: 15Gi
+    localPath: /usr/share/aerospike
+  - persistentVolumeName: aerospike-pv-2
+    storageClassName: local-storage-aerospike
+    nodeHostName: node3
+    capacity: 15Gi
+    localPath: /usr/share/aerospike
+  - persistentVolumeName: aerospike-pv-3
     storageClassName: local-storage-aerospike
     nodeHostName: node4
     capacity: 15Gi
     localPath: /usr/share/aerospike
-  - persistentVolumeName: redpanda-pv
+  - persistentVolumeName: redpanda-pv-1
     storageClassName: local-storage-redpanda
-    nodeHostName: node3
+    nodeHostName: node4
+    capacity: 3Gi
+    localPath: /usr/share/redpanda
+  - persistentVolumeName: redpanda-pv-2
+    storageClassName: local-storage-redpanda
+    nodeHostName: node5
+    capacity: 3Gi
+    localPath: /usr/share/redpanda
+  - persistentVolumeName: redpanda-pv-3
+    storageClassName: local-storage-redpanda
+    nodeHostName: node6
     capacity: 3Gi
     localPath: /usr/share/redpanda
   - persistentVolumeName: elk-pv
     storageClassName: local-storage-elk
-    nodeHostName: node5
+    nodeHostName: node6
     capacity: 5Gi
     localPath: /usr/share/elastic
+storageClass:
+  - name: local-storage-elk
+  - name: local-storage-redpanda
+  - name: local-storage-aerospike
+

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,6 +114,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 	cookie := "cookie"
 
 	newTag := func(timestamp time.Time, action string) dto.UserTagDTO {
+		id := 1337
 		return dto.UserTagDTO{
 			Cookie:  cookie,
 			Time:    timestamp.Format(dto.UserTagTimeLayout),
@@ -121,7 +123,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			Country: "PL",
 			Origin:  "https://www.google.com/",
 			ProductInfo: dto.ProductInfo{
-				ProductID:  1337,
+				ProductID:  &id,
 				BrandID:    "adidas",
 				CategoryID: "shoes",
 				Price:      100,
@@ -191,7 +193,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			action:     types.View,
 			aggregates: []types.Aggregate{types.Sum, types.Count},
 			expected: dto.AggregatesDTO{
-				Columns: []string{"1m_bucket", "action", types.Sum.String(), types.Count.String()},
+				Columns: []string{"1m_bucket", "action", strings.ToLower(types.Sum.String()), strings.ToLower(types.Count.String())},
 				Rows: [][]string{
 					{maNow.Format(dto.TimeRangeSecPrecisionLayout), "VIEW", "100", "1"},
 				},

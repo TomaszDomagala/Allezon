@@ -1,10 +1,10 @@
 ---
-{{- range $v := .Values.storage }}
+{{- range $v := .Values.storageClass }}
 
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: {{ $v.storageClassName }}
+  name: {{ $v.name }}
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
