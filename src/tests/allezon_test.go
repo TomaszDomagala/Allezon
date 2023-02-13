@@ -113,6 +113,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 	cookie := "cookie"
 
 	newTag := func(timestamp time.Time, action string) dto.UserTagDTO {
+		id := 1337
 		return dto.UserTagDTO{
 			Cookie:  cookie,
 			Time:    timestamp.Format(dto.UserTagTimeLayout),
@@ -121,7 +122,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			Country: "PL",
 			Origin:  "https://www.google.com/",
 			ProductInfo: dto.ProductInfo{
-				ProductID:  1337,
+				ProductID:  &id,
 				BrandID:    "adidas",
 				CategoryID: "shoes",
 				Price:      100,
