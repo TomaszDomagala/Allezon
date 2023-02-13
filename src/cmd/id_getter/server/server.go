@@ -119,7 +119,7 @@ func (s server) getIDFromDB(category string, element string) (int, error) {
 func (s server) saveIDInDB(category string, element string) (int, error) {
 	id, err := s.db.AppendElement(category, element)
 	if err != nil {
-		return 0, fmt.Errorf("error while appending record %w", err)
+		return 0, fmt.Errorf("error while appending record, %w", err)
 	}
 	s.logger.Debug("saved id in db", zap.String("category", category), zap.String("element", element), zap.Int("id", id))
 	return id, nil
