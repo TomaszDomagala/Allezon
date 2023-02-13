@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -188,7 +189,7 @@ func newAggregatesResponseBuilder(aggregates []types.Aggregate, params fetchPara
 		res.columns = append(res.columns, "category_id")
 	}
 	for _, a := range aggregates {
-		res.columns = append(res.columns, a.String())
+		res.columns = append(res.columns, strings.ToLower(a.String()))
 	}
 
 	res.aggs = aggregates
