@@ -50,7 +50,7 @@ func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggre
 }
 
 func getId(idsClient idGetter.Client, collection string, element string) (uint16, error) {
-	id, err := idGetter.GetU16ID(idsClient, collection, element)
+	id, err := idGetter.GetU16ID(idsClient, collection, element, true)
 	if err != nil {
 		return 0, fmt.Errorf("error getting %s id of tag, %w", collection, err)
 	}

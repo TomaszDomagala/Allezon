@@ -26,6 +26,7 @@ var (
 			Env: []string{
 				fmt.Sprintf("PORT=%s", IDGetterPort),
 				fmt.Sprintf("DB_ADDRESSES=aerospike:%s", AerospikePort),
+				"LOG_LEVEL=DEBUG",
 			},
 		},
 		OnServicesCreated: waitForService,

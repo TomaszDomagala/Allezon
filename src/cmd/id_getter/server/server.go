@@ -63,7 +63,7 @@ func (s server) getIDHandler(c *gin.Context) {
 		return
 	}
 
-	id, err := s.getID(req.CollectionName, req.Element)
+	id, err := s.getID(req.CollectionName, req.Element, req.CreateMissing)
 	if err != nil {
 		s.logger.Error("can't get id", zap.Error(err), zap.String("collection", req.CollectionName), zap.String("element", req.Element))
 		_ = c.AbortWithError(http.StatusInternalServerError, err)
@@ -73,34 +73,39 @@ func (s server) getIDHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, api.GetIdResponse{ID: int32(id)})
 }
 
-// getID returns id of element in category. It tries to find it in cache first, then in database.
+// getID returns id of element in collection. It tries to find it in cache first, then in database.
 // If it's not found in db, it generates new id and caches it.
-func (s server) getID(category string, element string) (int, error) {
-	if id, inCache := s.checkInCache(category, element); inCache {
+func (s server) getID(collection string, element string, createMissing bool) (int, error) {
+	if id, inCache := s.checkInCache(collection, element); inCache {
 		return id, nil
 	}
 
-	id, err := s.getIDFromDB(category, element)
+	id, err := s.getIDFromDB(collection, element)
 	if err != nil {
-		if !errors.Is(err, ErrorNotFound) {
+		if errors.Is(err, ErrorNotFound) {
+			if createMissing {
+				// element not found in db, save it and return new id.
+				id, err = s.saveIDInDB(collection, element)
+				if err != nil {
+					return 0, fmt.Errorf("error while saving id in db: %w", err)
+				}
+			} else {
+				return 0, fmt.Errorf("id in collection %s for element %s not found(createMissing=disable) : %w", collection, element, err)
+			}
+		} else {
 			return 0, fmt.Errorf("error while getting id from db: %w", err)
-		}
-		// element not found in db, save it and return new id.
-		id, err = s.saveIDInDB(category, element)
-		if err != nil {
-			return 0, fmt.Errorf("error while saving id in db: %w", err)
 		}
 	}
 
-	s.saveInCache(category, element, id)
+	s.saveInCache(collection, element, id)
 	return id, nil
 }
 
-// getIDFromDB returns id of element in category.
+// getIDFromDB returns id of element in collection.
 // It fetches the whole list from db and then searches for element in it.
 // Index of element in list is returned as its id.
-func (s server) getIDFromDB(category string, element string) (int, error) {
-	list, err := s.db.GetElements(category)
+func (s server) getIDFromDB(collection string, element string) (int, error) {
+	list, err := s.db.GetElements(collection)
 	if err != nil {
 		if errors.Is(err, db.KeyNotFoundError) {
 			return 0, fmt.Errorf("error while getting elements from db: %w", ErrorNotFound)
@@ -109,9 +114,9 @@ func (s server) getIDFromDB(category string, element string) (int, error) {
 	}
 	idx := slices.Index(list, element)
 	if idx == -1 {
-		return 0, fmt.Errorf("element not found in list, %w: (%v, %v)", ErrorNotFound, category, element)
+		return 0, fmt.Errorf("element not found in list, %w: (%v, %v)", ErrorNotFound, collection, element)
 	}
-	s.logger.Debug("found id in db", zap.String("category", category), zap.String("element", element), zap.Int("id", idx))
+	s.logger.Debug("found id in db", zap.String("collection", collection), zap.String("element", element), zap.Int("id", idx))
 	return idx, nil
 }
 

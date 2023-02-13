@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"github.com/TomaszDomagala/Allezon/src/cmd/id_getter/api"
 )
 
@@ -16,8 +18,8 @@ const (
 	CategoryCollection = "category"
 )
 
-func GetU16ID(cl Client, collection string, element string) (uint16, error) {
-	id, err := cl.GetID(collection, element)
+func GetU16ID(cl Client, collection string, element string, createMissing bool) (uint16, error) {
+	id, err := cl.GetID(collection, element, createMissing)
 	if err != nil {
 		return 0, err
 	}
@@ -29,24 +31,25 @@ func GetU16ID(cl Client, collection string, element string) (uint16, error) {
 }
 
 type Client interface {
-	GetID(collection string, element string) (id int32, err error)
+	GetID(collection string, element string, createMissing bool) (id int32, err error)
 }
 
 type client struct {
 	httpClient http.Client
 	addr       string
+	logger     *zap.Logger
 
 	cacheEnabled bool
 	rwLock       sync.RWMutex
 	cache        map[string]map[string]int32
 }
 
-func (c *client) GetID(collectionName string, element string) (int32, error) {
+func (c *client) GetID(collectionName string, element string, createMissing bool) (int32, error) {
 	id, ok := c.getFromCache(collectionName, element)
 	if ok {
 		return id, nil
 	}
-	id, err := c.getIDFromServer(collectionName, element)
+	id, err := c.getIDFromServer(collectionName, element, createMissing)
 	if err != nil {
 		return id, fmt.Errorf("error getting id from the server, %w", err)
 	}
@@ -55,10 +58,11 @@ func (c *client) GetID(collectionName string, element string) (int32, error) {
 	return id, nil
 }
 
-func (c *client) getIDFromServer(collectionName string, element string) (int32, error) {
+func (c *client) getIDFromServer(collectionName string, element string, createMissing bool) (int32, error) {
 	body, err := json.Marshal(api.GetIDRequest{
 		CollectionName: collectionName,
 		Element:        element,
+		CreateMissing:  createMissing,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshall body, %w", err)
@@ -68,7 +72,11 @@ func (c *client) getIDFromServer(collectionName string, element string) (int32, 
 	if err != nil {
 		return 0, fmt.Errorf("failed to make request to ip_getter, %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			c.logger.Warn("error closing response body", zap.Error(err))
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("ip_getter%s return not OK code %d with status %s", api.GetIDUrl, resp.StatusCode, resp.Status)
 	}
@@ -111,20 +119,22 @@ func (c *client) saveInCache(name string, element string, id int32) {
 }
 
 // NewClient returns a client with enabled cache.
-func NewClient(cl http.Client, addr string) Client {
+func NewClient(cl http.Client, addr string, logger *zap.Logger) Client {
 	return &client{
 		httpClient:   cl,
 		addr:         addr,
 		cache:        make(map[string]map[string]int32),
 		cacheEnabled: true,
+		logger:       logger,
 	}
 }
 
 // NewPureClient returns a client with disabled cache.
-func NewPureClient(cl http.Client, addr string) Client {
+func NewPureClient(cl http.Client, addr string, logger *zap.Logger) Client {
 	return &client{
 		httpClient:   cl,
 		addr:         addr,
 		cacheEnabled: false,
+		logger:       logger,
 	}
 }

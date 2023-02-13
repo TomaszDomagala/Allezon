@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,7 +193,7 @@ func (s *AllezonIntegrationTestSuite) TestSendUserTagsSingleCookie() {
 			action:     types.View,
 			aggregates: []types.Aggregate{types.Sum, types.Count},
 			expected: dto.AggregatesDTO{
-				Columns: []string{"1m_bucket", "action", types.Sum.String(), types.Count.String()},
+				Columns: []string{"1m_bucket", "action", strings.ToLower(types.Sum.String()), strings.ToLower(types.Count.String())},
 				Rows: [][]string{
 					{maNow.Format(dto.TimeRangeSecPrecisionLayout), "VIEW", "100", "1"},
 				},

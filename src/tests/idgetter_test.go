@@ -72,7 +72,7 @@ func (s *IDGetterIntegrationTestsSuite) TestIDGetter() {
 	s.Require().NoErrorf(err, "could not get idgetter url")
 
 	// Create a new client without caching.
-	client := idGetter.NewPureClient(http.Client{Timeout: 5 * time.Second}, url)
+	client := idGetter.NewPureClient(http.Client{Timeout: 5 * time.Second}, url, s.logger)
 
 	calls := []struct {
 		category   string
@@ -94,7 +94,7 @@ func (s *IDGetterIntegrationTestsSuite) TestIDGetter() {
 	}
 
 	for _, call := range calls {
-		id, err := client.GetID(call.category, call.name)
+		id, err := client.GetID(call.category, call.name, true)
 		s.Assert().NoErrorf(err, "could not get id for %s/%s", call.category, call.name)
 		s.Assert().Equalf(call.expectedID, id, "unexpected id for %s/%s", call.category, call.name)
 	}

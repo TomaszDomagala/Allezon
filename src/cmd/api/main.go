@@ -67,7 +67,7 @@ func main() {
 		getter = idGetter.NewNullClient(logger)
 	} else {
 		logger.Info("Using id getter client", zap.String("address", conf.IDGetterAddress))
-		getter = idGetter.NewClient(http.Client{Timeout: 5 * time.Second}, conf.IDGetterAddress)
+		getter = idGetter.NewClient(http.Client{Timeout: 5 * time.Second}, conf.IDGetterAddress, logger)
 	}
 
 	srv := server.New(server.Dependencies{

@@ -37,7 +37,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("Error while creating database client", zap.Error(err))
 	}
-	getter := idGetter.NewClient(http.Client{Timeout: 5 * time.Second}, conf.IDGetterAddress)
+	getter := idGetter.NewClient(http.Client{Timeout: 5 * time.Second}, conf.IDGetterAddress, logger)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
