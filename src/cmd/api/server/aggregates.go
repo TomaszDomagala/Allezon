@@ -212,7 +212,7 @@ func (s server) newFilters(origin, brandId, categoryId *string) (f filters, err 
 	if err != nil {
 		return filters{}, err
 	}
-	s.logger.Debug("filters initialized", zap.Any("filters", f))
+	s.logger.Debug("filters initialized", zap.Uint16p("originId", f.originId), zap.Uint16p("categoryId", f.categoryId), zap.Uint16p("brandId", f.brandId))
 	return f, nil
 }
 
