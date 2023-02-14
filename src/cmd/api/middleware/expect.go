@@ -13,6 +13,7 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 const (
@@ -61,17 +62,26 @@ func checkExpectation(fullPath string, logger *zap.Logger, requestCopy, response
 
 	switch fullPath {
 	case userProfilesFullPath:
-		var expectedUserProfile, actualUserProfile dto.UserProfileDTO
-		if err = json.Unmarshal(requestCopy.Bytes(), &expectedUserProfile); err != nil {
+		var expectedUserProfileDTO, actualUserProfileDTO dto.UserProfileDTO
+		if err = json.Unmarshal(requestCopy.Bytes(), &expectedUserProfileDTO); err != nil {
 			logger.Error("error unmarshalling expected user profile response body", zap.Error(err), zap.String("requestBody", requestCopy.String()))
 			return
 		}
-		if err = json.Unmarshal(responseCopy.Bytes(), &actualUserProfile); err != nil {
+		if err = json.Unmarshal(responseCopy.Bytes(), &actualUserProfileDTO); err != nil {
 			logger.Error("error unmarshalling actual user profile response body", zap.Error(err), zap.String("responseBody", responseCopy.String()))
 			return
 		}
-		expected = expectedUserProfile
-		actual = actualUserProfile
+
+		expected, err = fromUserProfileDTO(expectedUserProfileDTO)
+		if err != nil {
+			logger.Error("error converting expected user profile response body", zap.Error(err), zap.String("requestBody", requestCopy.String()))
+			return
+		}
+		actual, err = fromUserProfileDTO(actualUserProfileDTO)
+		if err != nil {
+			logger.Error("error converting actual user profile response body", zap.Error(err), zap.String("responseBody", responseCopy.String()))
+			return
+		}
 	case aggregatesFullPath:
 		var expectedAggregate, actualAggregate dto.AggregatesDTO
 		if err = json.Unmarshal(requestCopy.Bytes(), &expectedAggregate); err != nil {
@@ -133,4 +143,33 @@ func copyRequestBody(body io.ReadCloser, copy io.Writer, logger *zap.Logger) (io
 	}
 
 	return io.NopCloser(&buf), nil
+}
+
+type userProfile struct {
+	Cookie string          `json:"cookie"`
+	Views  []types.UserTag `json:"views"`
+	Buys   []types.UserTag `json:"buys"`
+}
+
+func fromUserProfileDTO(userProfileDTO dto.UserProfileDTO) (userProfile, error) {
+	var views, buys []types.UserTag
+	for _, view := range userProfileDTO.Views {
+		tag, err := dto.FromUserTagDTO(view)
+		if err != nil {
+			return userProfile{}, fmt.Errorf("failed to convert view: %w", err)
+		}
+		views = append(views, tag)
+	}
+	for _, buy := range userProfileDTO.Buys {
+		tag, err := dto.FromUserTagDTO(buy)
+		if err != nil {
+			return userProfile{}, fmt.Errorf("failed to convert buy: %w", err)
+		}
+		buys = append(buys, tag)
+	}
+	return userProfile{
+		Cookie: userProfileDTO.Cookie,
+		Views:  views,
+		Buys:   buys,
+	}, nil
 }
