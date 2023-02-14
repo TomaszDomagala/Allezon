@@ -10,12 +10,11 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.8.2
+	github.com/google/go-cmp v0.5.9
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249
 	github.com/ory/dockertest/v3 v3.9.1
-	github.com/panjf2000/ants/v2 v2.7.1
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
-	github.com/wk8/go-ordered-map/v2 v2.1.5
 	go.elastic.co/ecszap v1.0.1-0.20210922110956-698ab8c60e81
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771
@@ -26,8 +25,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/bahlo/generic-list-go v0.2.0 // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/docker/cli v20.10.14+incompatible // indirect
@@ -62,7 +59,6 @@ require (
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magefile/mage v1.9.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
-	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
