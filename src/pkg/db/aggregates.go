@@ -15,12 +15,13 @@ import (
 )
 
 const (
+	aggregatesNamespace = "allezon"
+
 	// aggregatesSet is the name of the set used for storing aggregates.
 	aggregatesSet = "aggregates"
 
-	aggregatesNamespace = "aggregates"
-	aggregatesIndex     = "ts"
-	aggregatesTsBin     = "ts"
+	aggregatesIndex = "ts"
+	aggregatesTsBin = "ts"
 
 	aggregatesViewsBin = "views"
 	aggregatesBuysBin  = "buys"

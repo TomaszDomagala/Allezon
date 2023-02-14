@@ -90,7 +90,7 @@ func (u userProfileClient) Add(tag *types.UserTag) (int, error) {
 		return 0, fmt.Errorf("error marshalling tag %#v, %w", tag, err)
 	}
 
-	policy := as.NewWritePolicy(0, as.TTLServerDefault)
+	policy := as.NewWritePolicy(0, as.TTLDontExpire)
 	policy.RecordExistsAction = as.UPDATE
 
 	binName := u.actionToBin(tag.Action)
@@ -114,7 +114,7 @@ func (u userProfileClient) RemoveOverLimit(cookie string, action types.Action, l
 		return fmt.Errorf("error creating key %s, %w", cookie, err)
 	}
 
-	sizePolicy := as.NewWritePolicy(0, as.TTLServerDefault)
+	sizePolicy := as.NewWritePolicy(0, as.TTLDontExpire)
 	sizePolicy.RecordExistsAction = as.UPDATE_ONLY
 
 	binName := u.actionToBin(action)
@@ -143,7 +143,7 @@ func (u userProfileClient) RemoveOverLimit(cookie string, action types.Action, l
 		return nil
 	}
 
-	removePolicy := as.NewWritePolicy(r.Generation, as.TTLServerDefault)
+	removePolicy := as.NewWritePolicy(r.Generation, as.TTLDontExpire)
 	removePolicy.RecordExistsAction = as.UPDATE_ONLY
 	removePolicy.GenerationPolicy = as.EXPECT_GEN_EQUAL
 
