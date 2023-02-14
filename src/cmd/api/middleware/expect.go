@@ -2,21 +2,26 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nsf/jsondiff"
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+)
+
+const (
+	userProfilesFullPath = "/user_profiles/:cookie"
+	aggregatesFullPath   = "/aggregates"
 )
 
 // expectationValidatorEndpoints is a list of endpoints that should be validated.
-var expectationValidatorEndpoints = []string{
-	"/user_profiles/:cookie",
-	"/aggregates",
-}
+var expectationValidatorEndpoints = []string{userProfilesFullPath, aggregatesFullPath}
 
 // ExpectationValidator is a middleware that validates the request body against the response body.
 // For some endpoints, the testing platform sends the expected response body in the request body. This middleware
@@ -44,17 +49,52 @@ func ExpectationValidator(logger *zap.Logger) gin.HandlerFunc {
 
 		c.Next()
 
-		opts := jsondiff.DefaultConsoleOptions()
-		diff, description := jsondiff.Compare(requestCopy.Bytes(), responseCopy.Bytes(), &opts)
-		if diff != jsondiff.FullMatch {
-			logger.Error("response body does not match the expected response body",
-				zap.String("endpoint", c.FullPath()),
-				zap.String("difference", description),
-				zap.String("expected", requestCopy.String()),
-				zap.String("actual", responseCopy.String()),
-			)
-		}
+		loggerWith := logger.With(zap.String("endpoint", c.FullPath()), zap.String("query", c.Request.URL.RawQuery))
 
+		checkExpectation(c.FullPath(), loggerWith, requestCopy, responseCopy)
+	}
+}
+
+func checkExpectation(fullPath string, logger *zap.Logger, requestCopy, responseCopy bytes.Buffer) {
+	var expected, actual any
+	var err error
+
+	switch fullPath {
+	case userProfilesFullPath:
+		var expectedUserProfile, actualUserProfile dto.UserProfileDTO
+		if err = json.Unmarshal(requestCopy.Bytes(), &expectedUserProfile); err != nil {
+			logger.Error("error unmarshalling expected user profile response body", zap.Error(err), zap.String("requestBody", requestCopy.String()))
+			return
+		}
+		if err = json.Unmarshal(responseCopy.Bytes(), &actualUserProfile); err != nil {
+			logger.Error("error unmarshalling actual user profile response body", zap.Error(err), zap.String("responseBody", responseCopy.String()))
+			return
+		}
+		expected = expectedUserProfile
+		actual = actualUserProfile
+	case aggregatesFullPath:
+		var expectedAggregate, actualAggregate dto.AggregatesDTO
+		if err = json.Unmarshal(requestCopy.Bytes(), &expectedAggregate); err != nil {
+			logger.Error("error unmarshalling expected aggregate response body", zap.Error(err), zap.String("requestBody", requestCopy.String()))
+			return
+		}
+		if err = json.Unmarshal(responseCopy.Bytes(), &actualAggregate); err != nil {
+			logger.Error("error unmarshalling actual aggregate response body", zap.Error(err), zap.String("responseBody", responseCopy.String()))
+			return
+		}
+		expected = expectedAggregate
+		actual = actualAggregate
+	default:
+		logger.Error("unexpected endpoint in expectation validator")
+		return
+	}
+
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		logger.Error("response body does not match the expected response body",
+			zap.String("difference", diff),
+			zap.String("expected", requestCopy.String()),
+			zap.String("actual", responseCopy.String()),
+		)
 	}
 }
 

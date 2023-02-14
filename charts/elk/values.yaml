@@ -10,13 +10,13 @@ eck-stack:
       - name: default
         count: 1
         config:
-          # Comment out when setting the vm.max_map_count via initContainer, as these are mutually exclusive.
-          # For production workloads, it is strongly recommended to increase the kernel setting vm.max_map_count to 262144
-          # and leave node.store.allow_mmap unset.
-          # ref: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-virtual-memory.html
-          #
+        # Comment out when setting the vm.max_map_count via initContainer, as these are mutually exclusive.
+        # For production workloads, it is strongly recommended to increase the kernel setting vm.max_map_count to 262144
+        # and leave node.store.allow_mmap unset.
+        # ref: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-virtual-memory.html
+        #
 
-#          node.store.allow_mmap: false
+        #          node.store.allow_mmap: false
         podTemplate:
           spec:
             initContainers:
@@ -24,12 +24,12 @@ eck-stack:
                 securityContext:
                   privileged: true
                   runAsUser: 0
-                command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+                command: [ 'sh', '-c', 'sysctl -w vm.max_map_count=262144' ]
               - name: ulimit
                 securityContext:
                   privileged: true
                   runAsUser: 0
-                command: ['sh', '-c', 'ulimit -n 65536 -u 4096']
+                command: [ 'sh', '-c', 'ulimit -n 65536 -u 4096' ]
             containers:
               - name: elasticsearch
                 resources:
@@ -68,7 +68,7 @@ eck-stack:
     clusterRole:
       name: filebeat
       rules:
-        - apiGroups: [""]
+        - apiGroups: [ "" ]
           resources:
             - namespaces
             - pods
@@ -99,10 +99,10 @@ eck-stack:
         name: kibana
       config:
         filebeat:
-#          inputs:
-#            - type: container
-#              paths:
-#                - /var/log/containers/*.log
+          #          inputs:
+          #            - type: container
+          #              paths:
+          #                - /var/log/containers/*.log
           autodiscover:
             providers:
               - type: kubernetes
@@ -114,8 +114,20 @@ eck-stack:
                     paths:
                       - /var/log/containers/*${data.kubernetes.container.id}.log
         processors:
-          - add_cloud_metadata: {}
-          - add_host_metadata: {}
+          - add_cloud_metadata: { }
+          - add_host_metadata: { }
+          - drop_event:
+              when:
+                not:
+                  and:
+                    - has_fields: [ "app" ]
+                    - or:
+                        - contains: { "log.level": "error" }
+                        - contains: { "log.level": "fatal" }
+                        - contains: { "log.level": "warn" }
+
+
+
 
       daemonSet:
         podTemplate:
