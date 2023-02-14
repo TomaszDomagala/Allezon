@@ -49,7 +49,7 @@ func (c client) AppendElement(category string, element string) (int, error) {
 		return 0, ae
 	}
 
-	policy := as.NewWritePolicy(0, as.TTLServerDefault)
+	policy := as.NewWritePolicy(0, as.TTLDontExpire)
 	policy.RecordExistsAction = as.UPDATE
 
 	r, createErr := c.cl.Operate(policy, key, as.ListAppendWithPolicyOp(as.NewListPolicy(as.ListOrderUnordered, as.ListWriteFlagsAddUnique), bin, element))
