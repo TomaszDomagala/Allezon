@@ -1,11 +1,13 @@
 package db
 
 import (
-	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	as "github.com/aerospike/aerospike-client-go/v6"
+	asTypes "github.com/aerospike/aerospike-client-go/v6/types"
 	"github.com/davecgh/go-spew/spew"
 	"go.uber.org/zap"
 
@@ -17,6 +19,8 @@ const (
 	aggregatesSet = "aggregates"
 
 	aggregatesNamespace = "aggregates"
+	aggregatesIndex     = "ts"
+	aggregatesTsBin     = "ts"
 
 	aggregatesViewsBin = "views"
 	aggregatesBuysBin  = "buys"
@@ -31,11 +35,15 @@ type aggregatesClient struct {
 	l  *zap.Logger
 }
 
-func timeToKey(t time.Time) string {
-	return t.Format(time.RFC822)
+func toKey(ts int64, key AggregateKey) string {
+	return fmt.Sprintf("%d_%d", ts, key.encode())
 }
 
-func (a *AggregateKey) decode(key aerospikeInt) {
+func toTs(t time.Time) int64 {
+	return t.Unix() / 60
+}
+
+func (a *AggregateKey) decode(key uint64) {
 	a.Origin = uint16(key)
 	key >>= 16
 	a.BrandId = uint16(key)
@@ -57,55 +65,54 @@ func decodeSumAndCount(v uint64) (sum uint64, count uint16) {
 	return
 }
 
-func (a aggregatesClient) Get(t time.Time, action types.Action) ([]ActionAggregates, error) {
-	var err error
-	key, err := as.NewKey(aggregatesNamespace, aggregatesSet, timeToKey(t))
+func (a aggregatesClient) Get(t time.Time, action types.Action) (agg []ActionAggregates, err error) {
+	ts := toTs(t)
 	if err != nil {
 		return nil, err
 	}
 
 	binName := a.actionToBin(action)
-	r, err := a.cl.Get(nil, key, binName)
+	stmt := as.NewStatement(aggregatesNamespace, aggregatesSet, binName)
+	stmt.Filter = as.NewEqualFilter(aggregatesTsBin, ts)
+
+	qP := as.NewQueryPolicy()
+	qP.MaxRetries = 0
+	rs, err := a.cl.Query(qP, stmt)
 	if err != nil {
-		if errors.Is(err, as.ErrKeyNotFound) {
-			return nil, fmt.Errorf("aggregates for minute %s not found, %w", timeToKey(t), KeyNotFoundError)
-		}
 		return nil, fmt.Errorf("failed to get aggregates, %w", err)
 	}
-	raw, ok := r.Bins[binName]
-	if !ok {
-		return nil, nil
-	}
-	pairs, ok := raw.([]as.MapPair)
-	if !ok {
-		return nil, fmt.Errorf("%s have wrong type: %T", action, raw)
-	}
-	res, err := unmarshallActionAggregates(pairs)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't unmarshall %ss, %w", action, err)
-	}
-	return res, nil
-}
-
-func unmarshallActionAggregates(kvs []as.MapPair) ([]ActionAggregates, error) {
-	res := make([]ActionAggregates, 0, len(kvs))
-	for _, kv := range kvs {
-		kI, ok := kv.Key.(aerospikeInt)
-		if !ok {
-			return nil, fmt.Errorf(`key "%s" is not an %T but %T`, kv.Key, kI, kv.Key)
+	defer func() {
+		if err := rs.Close(); err != nil {
+			a.l.Warn("error closing record set", zap.Error(err))
 		}
-		vI, ok := kv.Value.(uint64) // No idea why it's uint64 and not aerospikeInt.
+	}()
+	for r := range rs.Results() {
+		if r.Err != nil {
+			return nil, fmt.Errorf("error parsing aggregates, %w", r.Err)
+		}
+		raw, ok := r.Record.Bins[binName]
 		if !ok {
-			return nil, fmt.Errorf(`value "%s" is not an %T but %T`, kv.Value, vI, kv.Value)
+			continue
+		}
+		sumCount, ok := raw.(aerospikeInt)
+		if !ok {
+			return nil, fmt.Errorf(`bin "%s" is not an %T but %T`, binName, sumCount, raw)
+		}
+		rTs, key, err := a.decodeKey(r.Record.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing key, %w", err)
+		}
+		if ts != rTs {
+			return nil, fmt.Errorf("ts mismatch, expected: %d, got: %d", ts, rTs)
 		}
 
 		var a ActionAggregates
-		a.Sum, a.Count = decodeSumAndCount(vI)
-		a.Key.decode(kI)
+		a.Sum, a.Count = decodeSumAndCount(uint64(sumCount))
+		a.Key.decode(key)
 
-		res = append(res, a)
+		agg = append(agg, a)
 	}
-	return res, nil
+	return
 }
 
 func (a aggregatesClient) actionToBin(action types.Action) string {
@@ -121,25 +128,78 @@ func (a aggregatesClient) actionToBin(action types.Action) string {
 }
 
 func (a aggregatesClient) Add(aKey AggregateKey, tag types.UserTag) error {
-	name := timeToKey(tag.Time)
+	ts := toTs(tag.Time)
+	name := toKey(ts, aKey)
 	key, ae := as.NewKey(aggregatesNamespace, aggregatesSet, name)
 	if ae != nil {
 		return ae
 	}
 
-	policy := as.NewWritePolicy(0, as.TTLServerDefault)
-	policy.RecordExistsAction = as.UPDATE
+	updatePolicy := as.NewWritePolicy(0, as.TTLServerDefault)
+	updatePolicy.RecordExistsAction = as.UPDATE_ONLY
 
 	binName := a.actionToBin(tag.Action)
-	mapPolicy := as.NewMapPolicy(as.MapOrder.KEY_ORDERED, as.MapWriteMode.UPDATE)
-	increaseCountOp := as.MapIncrementOp(mapPolicy, binName, aKey.encode(), encodeSumAndCount(tag.ProductInfo.Price))
-
-	if _, err := a.cl.Operate(policy, key, increaseCountOp); err != nil {
-		return fmt.Errorf("error while trying to add to aggregates, time: %s, aKey: %s, price: %d, action %s, %w", name, spew.Sprint(aKey), tag.ProductInfo.Price, tag.Action, err)
+	encoded := encodeSumAndCount(tag.ProductInfo.Price)
+	bin := as.Bin{
+		Name:  binName,
+		Value: as.NewLongValue(int64(encoded)),
 	}
+	increaseCountOp := as.AddOp(&bin)
+
+	if _, err := a.cl.Operate(updatePolicy, key, increaseCountOp); err != nil {
+		if err.Matches(asTypes.KEY_NOT_FOUND_ERROR) {
+			createPolicy := as.NewWritePolicy(0, as.TTLServerDefault)
+			createPolicy.RecordExistsAction = as.CREATE_ONLY
+			createPolicy.SendKey = true
+			if err := a.cl.Put(createPolicy, key, as.BinMap{
+				binName:         int64(encoded),
+				aggregatesTsBin: ts,
+			}); err != nil {
+				return fmt.Errorf("error while trying to add to aggregates, time: %s, aKey: %s, price: %d, action %s, %w", name, spew.Sprint(aKey), tag.ProductInfo.Price, tag.Action, err)
+			}
+		} else {
+			return fmt.Errorf("error while trying to add to aggregates, time: %s, aKey: %s, price: %d, action %s, %w", name, spew.Sprint(aKey), tag.ProductInfo.Price, tag.Action, err)
+		}
+	}
+
 	return nil
 }
 
+func (a aggregatesClient) createIndex() {
+	task, err := a.cl.CreateIndex(nil, aggregatesNamespace, aggregatesSet, aggregatesIndex, aggregatesTsBin, as.NUMERIC)
+	if err != nil {
+		if err.Matches(asTypes.INDEX_FOUND) {
+			return
+		}
+		a.l.Fatal("error creating index", zap.Error(err))
+	}
+	err = <-task.OnComplete()
+	if err != nil {
+		if err.Matches(asTypes.INDEX_FOUND) {
+			return
+		}
+		a.l.Fatal("error creating index", zap.Error(err))
+	}
+}
+
+func (a aggregatesClient) decodeKey(key *as.Key) (ts int64, aKey uint64, err error) {
+	split := strings.Split(key.Value().String(), "_")
+	if len(split) != 2 {
+		return 0, 0, fmt.Errorf("wrong key format %s", split)
+	}
+	ts, err = strconv.ParseInt(split[0], 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	aKey, err = strconv.ParseUint(split[1], 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	return
+}
+
 func (c client) Aggregates() AggregatesClient {
-	return aggregatesClient(c)
+	cl := aggregatesClient(c)
+	cl.createIndex()
+	return cl
 }
