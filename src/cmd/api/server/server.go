@@ -20,20 +20,22 @@ type Server interface {
 }
 
 type Dependencies struct {
-	Logger   *zap.Logger
-	Cfg      *config.Config
-	Producer messaging.UserTagsProducer
-	DB       db.Client
-	IDGetter idGetter.Client
+	Logger       *zap.Logger
+	Cfg          *config.Config
+	Producer     messaging.UserTagsProducer
+	ProfilesDB   db.Client
+	AggregatesDB db.Client
+	IDGetter     idGetter.Client
 }
 
 type server struct {
-	conf     *config.Config
-	logger   *zap.Logger
-	engine   *gin.Engine
-	producer messaging.UserTagsProducer
-	db       db.Client
-	idGetter idGetter.Client
+	conf         *config.Config
+	logger       *zap.Logger
+	engine       *gin.Engine
+	producer     messaging.UserTagsProducer
+	profilesDB   db.Client
+	aggregatesDB db.Client
+	idGetter     idGetter.Client
 }
 
 func (s server) Run() error {
@@ -49,12 +51,13 @@ func New(deps Dependencies) Server {
 	router.Use(middleware.ExpectationValidator(deps.Logger))
 
 	s := server{
-		engine:   router,
-		producer: deps.Producer,
-		logger:   deps.Logger,
-		conf:     deps.Cfg,
-		db:       deps.DB,
-		idGetter: deps.IDGetter,
+		engine:       router,
+		producer:     deps.Producer,
+		logger:       deps.Logger,
+		conf:         deps.Cfg,
+		profilesDB:   deps.ProfilesDB,
+		aggregatesDB: deps.AggregatesDB,
+		idGetter:     deps.IDGetter,
 	}
 
 	router.GET("/health", s.health)

@@ -50,9 +50,10 @@ func ExpectationValidator(logger *zap.Logger) gin.HandlerFunc {
 
 		c.Next()
 
-		loggerWith := logger.With(zap.String("endpoint", c.FullPath()), zap.String("query", c.Request.URL.RawQuery))
-
-		checkExpectation(c.FullPath(), loggerWith, requestCopy, responseCopy)
+		if c.Writer.Status() == http.StatusOK || !c.Writer.Written() {
+			loggerWith := logger.With(zap.String("endpoint", c.FullPath()), zap.String("query", c.Request.URL.RawQuery))
+			checkExpectation(c.FullPath(), loggerWith, requestCopy, responseCopy)
+		}
 	}
 }
 

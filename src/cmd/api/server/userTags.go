@@ -54,7 +54,7 @@ const userTagLimit = 200
 const userTagGCThreshold = int(userTagLimit * float32(1.1))
 
 func (s server) addUserTag(tag *types.UserTag) error {
-	newLen, err := s.db.UserProfiles().Add(tag)
+	newLen, err := s.profilesDB.UserProfiles().Add(tag)
 	if err != nil {
 		return fmt.Errorf("error updating userTags, %w", err)
 	}
@@ -72,7 +72,7 @@ func (s server) removeOldUserTags(cookie string, action types.Action) {
 	bo.MaxInterval = 10 * time.Second
 
 	err := backoff.Retry(func() error {
-		if err := s.db.UserProfiles().RemoveOverLimit(cookie, action, userTagLimit); err != nil {
+		if err := s.profilesDB.UserProfiles().RemoveOverLimit(cookie, action, userTagLimit); err != nil {
 			s.logger.Debug("error cleaning user profiles", zap.String("cookie", cookie), zap.Stringer("action", action), zap.Error(err))
 			return err
 		}

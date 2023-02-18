@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Shopify/sarama"
@@ -87,7 +86,7 @@ func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 		case msg := <-claim.Messages():
 			c.logger.Debug("received message", zap.ByteString("key", msg.Key), zap.ByteString("value", msg.Value), zap.String("topic", msg.Topic), zap.Int32("partition", msg.Partition), zap.Int64("offset", msg.Offset))
 			var tag types.UserTag
-			if err := json.Unmarshal(msg.Value, &tag); err != nil {
+			if err := types.UnmarshalUserTag(msg.Value, &tag); err != nil {
 				c.logger.Error("failed to unmarshal message", zap.Error(err))
 				continue
 			}

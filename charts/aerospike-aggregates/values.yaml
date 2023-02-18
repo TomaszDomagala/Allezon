@@ -1,0 +1,12 @@
+aerospike-aggregates:
+  dbReplicas: 3 # Change to 3 in real deployment.
+  autoRolloutConfig: true
+
+  persistenceStorage:
+    - enabled: true
+      storageClass: local-storage-aerospike-aggregates
+      name: aerospike-data-pv
+      mountPath: /opt/aerospike/pv
+      volumeMode: Filesystem
+      accessMode: ReadWriteOnce
+      size: 16Gi

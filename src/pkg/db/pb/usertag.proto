@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package types;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "pkg/types/pb";
+
+enum Device {
+  Pc = 0;
+  Mobile = 1;
+  Tv = 2;
+}
+
+enum Action {
+  View = 0;
+  Buy = 1;
+}
+
+message ProductInfo {
+  int32 product_id = 1;
+  string brand_id = 2;
+  string category_id = 3;
+  uint32 price = 4;
+}
+
+message UserTag {
+  google.protobuf.Timestamp time = 1;
+  string cookie = 2;
+  string country = 3;
+  Device device = 4;
+  Action action = 5;
+  string origin = 6;
+  ProductInfo product_info = 7;
+}

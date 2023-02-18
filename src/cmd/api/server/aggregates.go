@@ -114,7 +114,7 @@ func (s server) aggregates(aggregates []types.Aggregate, params fetchParams) (dt
 	}
 	res := newAggregatesResponseBuilder(aggregates, params)
 	for t := params.from; t.Before(params.to); t = t.Add(time.Minute) {
-		aggs, err := s.db.Aggregates().Get(t, params.action)
+		aggs, err := s.aggregatesDB.Aggregates().Get(t, params.action)
 		if err != nil {
 			return dto.AggregatesDTO{}, fmt.Errorf("error getting aggregates for time %s, %w", t, err)
 		}

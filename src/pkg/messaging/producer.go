@@ -1,7 +1,6 @@
 package messaging
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -32,19 +31,19 @@ func NewProducer(logger *zap.Logger, addresses []string) (*Producer, error) {
 func (p *Producer) Send(tag types.UserTag) error {
 	start := time.Now()
 
-	tagJson, err := json.Marshal(tag)
+	tagBytes, err := types.MarshalUserTag(&tag)
 	if err != nil {
 		return fmt.Errorf("failed to marshal user tag: %w", err)
 	}
 	partition, offset, err := p.producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     UserTagsTopic,
-		Value:     sarama.ByteEncoder(tagJson),
+		Value:     sarama.ByteEncoder(tagBytes),
 		Partition: 0,
 	})
 
 	logOpts := []zap.Field{
 		zap.String("topic", UserTagsTopic),
-		zap.ByteString("value", tagJson),
+		zap.ByteString("value", tagBytes),
 		zap.Duration("duration", time.Since(start)),
 	}
 	if err != nil {

@@ -20,8 +20,5 @@ dependencies:
 - name: redpanda
   repository: https://charts.redpanda.com
   version: 2.8.6
-- name: aerospike
-  repository: https://aerospike.github.io/aerospike-kubernetes
-  version: 5.5.0
-digest: sha256:876d5a68dd893f4d09de7f04ca307d3da936f7daff1e7d9c78954e366ce8e443
-generated: "2023-02-11T17:46:46.596574379+01:00"
+digest: sha256:b39f5c0bcaecbcf69c6d2c0632680369fd0a06d794bebd295fad933beb065087
+generated: "2023-02-16T00:15:20.619161954+01:00"
