@@ -17,12 +17,6 @@ import (
 const (
 	aggregatesNamespace = "allezon"
 
-	// aggregatesSet is the name of the set used for storing aggregates.
-	aggregatesSet = "aggregates"
-
-	aggregatesIndex = "ts"
-	aggregatesTsBin = "ts"
-
 	aggregatesViewsBin = "views"
 	aggregatesBuysBin  = "buys"
 )
@@ -42,6 +36,11 @@ func toKey(ts int64, key AggregateKey) string {
 
 func toTs(t time.Time) int64 {
 	return t.Unix() / 60
+}
+
+func toSet(ts int64) string {
+	const numSets = 1000
+	return strconv.Itoa(int(ts % numSets))
 }
 
 func (a *AggregateKey) decode(key uint64) {
@@ -73,12 +72,10 @@ func (a aggregatesClient) Get(t time.Time, action types.Action) (agg []ActionAgg
 	}
 
 	binName := a.actionToBin(action)
-	stmt := as.NewStatement(aggregatesNamespace, aggregatesSet, binName)
-	stmt.Filter = as.NewEqualFilter(aggregatesTsBin, ts)
 
-	qP := as.NewQueryPolicy()
-	qP.MaxRetries = 0
-	rs, err := a.cl.Query(qP, stmt)
+	sP := as.NewScanPolicy()
+	sP.MaxRetries = 0
+	rs, err := a.cl.ScanAll(sP, aggregatesNamespace, toSet(ts), binName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get aggregates, %w", err)
 	}
@@ -104,7 +101,7 @@ func (a aggregatesClient) Get(t time.Time, action types.Action) (agg []ActionAgg
 			return nil, fmt.Errorf("error parsing key, %w", err)
 		}
 		if ts != rTs {
-			return nil, fmt.Errorf("ts mismatch, expected: %d, got: %d", ts, rTs)
+			continue
 		}
 
 		var a ActionAggregates
@@ -131,7 +128,7 @@ func (a aggregatesClient) actionToBin(action types.Action) string {
 func (a aggregatesClient) Add(aKey AggregateKey, tag types.UserTag) error {
 	ts := toTs(tag.Time)
 	name := toKey(ts, aKey)
-	key, ae := as.NewKey(aggregatesNamespace, aggregatesSet, name)
+	key, ae := as.NewKey(aggregatesNamespace, toSet(ts), name)
 	if ae != nil {
 		return ae
 	}
@@ -153,8 +150,7 @@ func (a aggregatesClient) Add(aKey AggregateKey, tag types.UserTag) error {
 			createPolicy.RecordExistsAction = as.CREATE_ONLY
 			createPolicy.SendKey = true
 			if err := a.cl.Put(createPolicy, key, as.BinMap{
-				binName:         int64(encoded),
-				aggregatesTsBin: ts,
+				binName: int64(encoded),
 			}); err != nil {
 				return fmt.Errorf("error while trying to add to aggregates, time: %s, aKey: %s, price: %d, action %s, %w", name, spew.Sprint(aKey), tag.ProductInfo.Price, tag.Action, err)
 			}
@@ -164,23 +160,6 @@ func (a aggregatesClient) Add(aKey AggregateKey, tag types.UserTag) error {
 	}
 
 	return nil
-}
-
-func (a aggregatesClient) createIndex() {
-	task, err := a.cl.CreateIndex(nil, aggregatesNamespace, aggregatesSet, aggregatesIndex, aggregatesTsBin, as.NUMERIC)
-	if err != nil {
-		if err.Matches(asTypes.INDEX_FOUND) {
-			return
-		}
-		a.l.Fatal("error creating index", zap.Error(err))
-	}
-	err = <-task.OnComplete()
-	if err != nil {
-		if err.Matches(asTypes.INDEX_FOUND) {
-			return
-		}
-		a.l.Fatal("error creating index", zap.Error(err))
-	}
 }
 
 func (a aggregatesClient) decodeKey(key *as.Key) (ts int64, aKey uint64, err error) {
@@ -200,7 +179,5 @@ func (a aggregatesClient) decodeKey(key *as.Key) (ts int64, aKey uint64, err err
 }
 
 func (c client) Aggregates() AggregatesClient {
-	cl := aggregatesClient(c)
-	cl.createIndex()
-	return cl
+	return aggregatesClient(c)
 }
