@@ -6,7 +6,6 @@ import (
 
 	as "github.com/aerospike/aerospike-client-go/v6"
 	asTypes "github.com/aerospike/aerospike-client-go/v6/types"
-	"github.com/bytedance/sonic"
 	"go.uber.org/zap"
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/types"
@@ -26,14 +25,6 @@ type userProfileClient struct {
 	l  *zap.Logger
 }
 
-func marshallTag(tag *types.UserTag) ([]byte, error) {
-	return sonic.ConfigFastest.Marshal(tag)
-}
-
-func unmarshallTag(data []byte, tag *types.UserTag) (err error) {
-	return sonic.ConfigFastest.Unmarshal(data, tag)
-}
-
 func (u userProfileClient) decodeBin(up *[]types.UserTag, action types.Action, bins as.BinMap) error {
 	binName := u.actionToBin(action)
 	raw, ok := bins[binName]
@@ -50,7 +41,7 @@ func (u userProfileClient) decodeBin(up *[]types.UserTag, action types.Action, b
 		if !ok {
 			return fmt.Errorf("unexpected type %T for key %s in bin %s", kv.Value, kv.Key, kv.Value)
 		}
-		if err := unmarshallTag(value, &(*up)[i]); err != nil {
+		if err := types.UnmarshalUserTag(value, &(*up)[i]); err != nil {
 			return fmt.Errorf("cannot unmarshall tag %s, %w", string(value), err)
 		}
 	}
@@ -85,7 +76,7 @@ func (u userProfileClient) Add(tag *types.UserTag) (int, error) {
 	if ae != nil {
 		return 0, fmt.Errorf("error creating key %s, %w", name, ae)
 	}
-	marshalledTag, err := marshallTag(tag)
+	marshalledTag, err := types.MarshalUserTag(tag)
 	if err != nil {
 		return 0, fmt.Errorf("error marshalling tag %#v, %w", tag, err)
 	}

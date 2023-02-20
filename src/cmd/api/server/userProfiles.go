@@ -80,7 +80,7 @@ func convertTags(tags []types.UserTag, from, to time.Time, limit int) []dto.User
 }
 
 func (s server) userProfiles(cookie string, from, to time.Time, limit int) (dto.UserProfileDTO, error) {
-	res, err := s.db.UserProfiles().Get(cookie)
+	res, err := s.profilesDB.UserProfiles().Get(cookie)
 	if err != nil {
 		if errors.Is(err, db.KeyNotFoundError) {
 			s.logger.Debug("key not found", zap.String("cookie", cookie))

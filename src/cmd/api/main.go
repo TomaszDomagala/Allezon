@@ -49,15 +49,26 @@ func main() {
 		}
 	}
 
-	var dbClient db.Client
+	var dbProfilesClient db.Client
 	if conf.DBNullClient {
-		logger.Info("Using null database client")
-		dbClient = db.NewNullClient(logger)
+		logger.Info("Using null profiles database client")
+		dbProfilesClient = db.NewNullClient(logger)
 	} else {
-		logger.Info("Using aerospike database client, addresses: ", zap.Strings("addresses", conf.DBAddresses))
-		dbClient, err = db.NewClientFromAddresses(logger, conf.DBAddresses...)
+		logger.Info("Using aerospike database profiles client, addresses: ", zap.Strings("addresses", conf.DBProfilesAddresses))
+		dbProfilesClient, err = db.NewClientFromAddresses(logger, conf.DBProfilesAddresses...)
 		if err != nil {
-			logger.Fatal("Error while creating database client", zap.Error(err))
+			logger.Fatal("Error while creating database profiles client", zap.Error(err))
+		}
+	}
+	var dbAggregatesClient db.Client
+	if conf.DBNullClient {
+		logger.Info("Using null aggregates database client")
+		dbAggregatesClient = db.NewNullClient(logger)
+	} else {
+		logger.Info("Using aerospike database aggregates client, addresses: ", zap.Strings("addresses", conf.DBAggregatesAddresses))
+		dbAggregatesClient, err = db.NewClientFromAddresses(logger, conf.DBAggregatesAddresses...)
+		if err != nil {
+			logger.Fatal("Error while creating database aggregates client", zap.Error(err))
 		}
 	}
 
@@ -71,11 +82,12 @@ func main() {
 	}
 
 	srv := server.New(server.Dependencies{
-		Logger:   logger,
-		Cfg:      conf,
-		Producer: producer,
-		DB:       dbClient,
-		IDGetter: getter,
+		Logger:       logger,
+		Cfg:          conf,
+		Producer:     producer,
+		ProfilesDB:   dbProfilesClient,
+		AggregatesDB: dbAggregatesClient,
+		IDGetter:     getter,
 	})
 
 	if err := srv.Run(); err != nil {

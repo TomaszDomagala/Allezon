@@ -24,7 +24,7 @@ func New() (*Config, error) {
 	field("port", 8080)
 	field("echo_mode", false)
 
-	field("log_level", "info")
+	field("log_level", "debug")
 
 	field("db_null_client", false)
 	field("db_addresses", []string{})

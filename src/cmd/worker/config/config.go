@@ -27,7 +27,7 @@ func field(name string, defaultValue any) {
 func New() (*Config, error) {
 	field("port", 8080)
 
-	field("log_level", "info")
+	field("log_level", "debug")
 
 	field("kafka_addresses", []string{})
 	field("db_addresses", []string{})

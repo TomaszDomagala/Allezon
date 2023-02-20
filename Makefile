@@ -11,7 +11,7 @@ KIND_SETUP_FILE ?= "kind.setup.yaml"
 KIND_CLUSTER_NAME ?= "allezon-cluster"
 
 # Helm config.
-HELM_CHARTS ?= api allezon idgetter worker ippool elk elk-operator
+HELM_CHARTS ?= api allezon idgetter worker ippool elk elk-operator aerospike-profiles aerospike-aggregates
 HELM_RELEASE_NAME ?= allezon
 
 HELM_IPPOOL_RELEASE_NAME ?= $(HELM_RELEASE_NAME)-ippool
@@ -28,7 +28,7 @@ DOCKER_REPO ?= "registry.gitlab.com"
 DOCKER_NAMESPACE ?= "registry.gitlab.com/allezon/registry"
 
 # ALLEZON_VERSION sets the version of all docker images and is used during deployment.
-ALLEZON_VERSION ?= "0.2.5"
+ALLEZON_VERSION ?= "0.2.2138"
 
 # api service config
 API_VERSION ?= $(ALLEZON_VERSION)
@@ -140,7 +140,6 @@ helm-install: ## Install allezon helm chart.
   --set api.image.tag=$(API_VERSION) \
   --set idgetter.image.tag=$(ID_GETTER_VERSION) \
   --set worker.image.tag=$(WORKER_VERSION) \
-  --set aerospike.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike.conf)
 
 .PHONY: helm-install-local
 helm-install-local: ## Install allezon helm chart using local setup.
@@ -156,7 +155,6 @@ helm-upgrade: ## Upgrade allezon helm chart.
   --set api.image.tag=$(API_VERSION) \
   --set idgetter.image.tag=$(ID_GETTER_VERSION) \
   --set worker.image.tag=$(WORKER_VERSION) \
-  --set aerospike.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike.conf)
 
 .PHONY: helm-upgrade-local
 helm-upgrade-local: ## Upgrade allezon helm chart using local setup.
@@ -240,9 +238,37 @@ cluster-uninstall: helm-uninstall ## Uninstall allezon from a remote cluster.
 cluster-ippool-install: ## Install the LoadBalancer IP address on the remote cluster.
 	helm install $(HELM_IPPOOL_RELEASE_NAME) $(CHARTS_DIR)/ippool
 
-.PHONE: cluster-ippool-uninstall
+.PHONY: cluster-ippool-uninstall
 cluster-ippool-uninstall: ## Uninstall the LoadBalancer IP address from the remote cluster.
 	helm uninstall $(HELM_IPPOOL_RELEASE_NAME)
+
+
+AEROSPIKE_PROFILES_RELEASE_NAME ?= storage-profiles
+AEROSPIKE_AGGREGATES_RELEASE_NAME ?= storage-aggregates
+
+.PHONY: cluster-profiles-storage-install
+cluster-profiles-storage-install: ## Install the storage class for profiles on the remote cluster.
+	helm install $(AEROSPIKE_PROFILES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-profiles --set aerospike-profiles.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_profiles.conf)
+
+.PHONY: cluster-profiles-storage-uninstall
+cluster-profiles-storage-uninstall: ## Uninstall the storage class for profiles from the remote cluster.
+	helm uninstall $(AEROSPIKE_PROFILES_RELEASE_NAME)
+
+.PHONY: cluster-profiles-storage-upgrade
+cluster-profiles-storage-upgrade: ## Upgrade the storage class for profiles on the remote cluster.
+	helm upgrade $(AEROSPIKE_PROFILES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-profiles --set aerospike-profiles.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_profiles.conf)
+
+.PHONY: cluster-aggregates-storage-install
+cluster-aggregates-storage-install: ## Install the storage class for aggregates on the remote cluster.
+	helm install $(AEROSPIKE_AGGREGATES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-aggregates --set aerospike-aggregates.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_aggregates.conf)
+
+.PHONY: cluster-aggregates-storage-uninstall
+cluster-aggregates-storage-uninstall: ## Uninstall the storage class for aggregates from the remote cluster.
+	helm uninstall $(AEROSPIKE_AGGREGATES_RELEASE_NAME)
+
+.PHONY: cluster-aggregates-storage-upgrade
+cluster-aggregates-storage-upgrade: ## Upgrade the storage class for aggregates on the remote cluster.
+	helm upgrade $(AEROSPIKE_AGGREGATES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-aggregates --set aerospike-aggregates.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_aggregates.conf)
 
 
 .PHONY: cluster-storage-install

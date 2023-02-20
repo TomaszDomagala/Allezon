@@ -17,8 +17,9 @@ type Config struct {
 	KafkaReplicationFactor int16    `mapstructure:"kafka_replication_factor"`
 
 	// DB options
-	DBAddresses  []string `mapstructure:"db_addresses"`
-	DBNullClient bool     `mapstructure:"db_null_client"`
+	DBProfilesAddresses   []string `mapstructure:"db_profiles_addresses"`
+	DBAggregatesAddresses []string `mapstructure:"db_aggregates_addresses"`
+	DBNullClient          bool     `mapstructure:"db_null_client"`
 
 	// ID Getter
 	IDGetterAddress    string `mapstructure:"id_getter_address"`
@@ -41,7 +42,8 @@ func New() (*Config, error) {
 	field("kafka_num_partitions", 1)
 	field("kafka_replication_factor", 1)
 
-	field("db_addresses", []string{})
+	field("db_profiles_addresses", []string{})
+	field("db_aggregates_addresses", []string{})
 	field("db_null_client", false)
 
 	field("id_getter_address", "")

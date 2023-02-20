@@ -2,21 +2,27 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nsf/jsondiff"
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
+
+	"github.com/TomaszDomagala/Allezon/src/pkg/dto"
+	"github.com/TomaszDomagala/Allezon/src/pkg/types"
+)
+
+const (
+	userProfilesFullPath = "/user_profiles/:cookie"
+	aggregatesFullPath   = "/aggregates"
 )
 
 // expectationValidatorEndpoints is a list of endpoints that should be validated.
-var expectationValidatorEndpoints = []string{
-	"/user_profiles/:cookie",
-	"/aggregates",
-}
+var expectationValidatorEndpoints = []string{userProfilesFullPath, aggregatesFullPath}
 
 // ExpectationValidator is a middleware that validates the request body against the response body.
 // For some endpoints, the testing platform sends the expected response body in the request body. This middleware
@@ -44,17 +50,62 @@ func ExpectationValidator(logger *zap.Logger) gin.HandlerFunc {
 
 		c.Next()
 
-		opts := jsondiff.DefaultConsoleOptions()
-		diff, description := jsondiff.Compare(requestCopy.Bytes(), responseCopy.Bytes(), &opts)
-		if diff != jsondiff.FullMatch {
-			logger.Error("response body does not match the expected response body",
-				zap.String("endpoint", c.FullPath()),
-				zap.String("difference", description),
-				zap.String("expected", requestCopy.String()),
-				zap.String("actual", responseCopy.String()),
-			)
+		if c.Writer.Status() == http.StatusOK || !c.Writer.Written() {
+			loggerWith := logger.With(zap.String("endpoint", c.FullPath()), zap.String("query", c.Request.URL.RawQuery))
+			checkExpectation(c.FullPath(), loggerWith, requestCopy, responseCopy)
+		}
+	}
+}
+
+func checkExpectation(fullPath string, logger *zap.Logger, requestCopy, responseCopy bytes.Buffer) {
+	var expected, actual any
+	var err error
+
+	switch fullPath {
+	case userProfilesFullPath:
+		var expectedUserProfileDTO, actualUserProfileDTO dto.UserProfileDTO
+		if err = json.Unmarshal(requestCopy.Bytes(), &expectedUserProfileDTO); err != nil {
+			logger.Error("error unmarshalling expected user profile response body", zap.Error(err), zap.String("requestBody", requestCopy.String()))
+			return
+		}
+		if err = json.Unmarshal(responseCopy.Bytes(), &actualUserProfileDTO); err != nil {
+			logger.Error("error unmarshalling actual user profile response body", zap.Error(err), zap.String("responseBody", responseCopy.String()))
+			return
 		}
 
+		expected, err = fromUserProfileDTO(expectedUserProfileDTO)
+		if err != nil {
+			logger.Error("error converting expected user profile response body", zap.Error(err), zap.String("requestBody", requestCopy.String()))
+			return
+		}
+		actual, err = fromUserProfileDTO(actualUserProfileDTO)
+		if err != nil {
+			logger.Error("error converting actual user profile response body", zap.Error(err), zap.String("responseBody", responseCopy.String()))
+			return
+		}
+	case aggregatesFullPath:
+		var expectedAggregate, actualAggregate dto.AggregatesDTO
+		if err = json.Unmarshal(requestCopy.Bytes(), &expectedAggregate); err != nil {
+			logger.Error("error unmarshalling expected aggregate response body", zap.Error(err), zap.String("requestBody", requestCopy.String()))
+			return
+		}
+		if err = json.Unmarshal(responseCopy.Bytes(), &actualAggregate); err != nil {
+			logger.Error("error unmarshalling actual aggregate response body", zap.Error(err), zap.String("responseBody", responseCopy.String()))
+			return
+		}
+		expected = expectedAggregate
+		actual = actualAggregate
+	default:
+		logger.Error("unexpected endpoint in expectation validator")
+		return
+	}
+
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		logger.Error("response body does not match the expected response body",
+			zap.String("difference", diff),
+			zap.String("expected", requestCopy.String()),
+			zap.String("actual", responseCopy.String()),
+		)
 	}
 }
 
@@ -93,4 +144,33 @@ func copyRequestBody(body io.ReadCloser, copy io.Writer, logger *zap.Logger) (io
 	}
 
 	return io.NopCloser(&buf), nil
+}
+
+type userProfile struct {
+	Cookie string          `json:"cookie"`
+	Views  []types.UserTag `json:"views"`
+	Buys   []types.UserTag `json:"buys"`
+}
+
+func fromUserProfileDTO(userProfileDTO dto.UserProfileDTO) (userProfile, error) {
+	var views, buys []types.UserTag
+	for _, view := range userProfileDTO.Views {
+		tag, err := dto.FromUserTagDTO(view)
+		if err != nil {
+			return userProfile{}, fmt.Errorf("failed to convert view: %w", err)
+		}
+		views = append(views, tag)
+	}
+	for _, buy := range userProfileDTO.Buys {
+		tag, err := dto.FromUserTagDTO(buy)
+		if err != nil {
+			return userProfile{}, fmt.Errorf("failed to convert buy: %w", err)
+		}
+		buys = append(buys, tag)
+	}
+	return userProfile{
+		Cookie: userProfileDTO.Cookie,
+		Views:  views,
+		Buys:   buys,
+	}, nil
 }

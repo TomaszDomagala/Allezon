@@ -1,13 +1,12 @@
 package db
 
 import (
-	"encoding/json"
 	"runtime"
 	"sort"
 	"testing"
 	"time"
 
-	"github.com/nsf/jsondiff"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
@@ -97,13 +96,7 @@ func (s *DBSuite) Test_UserProfiles() {
 	for cookie, profile := range profiles {
 		res, err := up.Get(cookie)
 		s.Require().NoErrorf(err, "failed to get record")
-		resSer, err := json.Marshal(res)
-		s.Require().NoErrorf(err, "failed to serialize profile")
-		profileSer, err := json.Marshal(profile)
-		s.Require().NoErrorf(err, "failed to serialize profile")
-		opts := jsondiff.DefaultConsoleOptions()
-		status, diff := jsondiff.Compare(profileSer, resSer, &opts)
-		s.Assert().Equal(jsondiff.FullMatch, status, diff)
+		s.Assert().Empty(cmp.Diff(profile, res))
 	}
 }
 
@@ -133,13 +126,7 @@ func (s *DBSuite) Test_UserProfiles_RemoveOverLimit() {
 	// Check insertion
 	res, err := up.Get(cookieFoo)
 	s.Require().NoErrorf(err, "failed to get record")
-	resSer, err := json.Marshal(res)
-	s.Require().NoErrorf(err, "failed to serialize profile")
-	profileSer, err := json.Marshal(profile)
-	s.Require().NoErrorf(err, "failed to serialize profile")
-	opts := jsondiff.DefaultConsoleOptions()
-	status, diff := jsondiff.Compare(profileSer, resSer, &opts)
-	s.Assert().Equal(jsondiff.FullMatch, status, diff)
+	s.Assert().Empty(cmp.Diff(profile, res))
 
 	// Remove
 	err = up.RemoveOverLimit(cookieFoo, types.Buy, 1)
@@ -150,13 +137,7 @@ func (s *DBSuite) Test_UserProfiles_RemoveOverLimit() {
 
 	res, err = up.Get(cookieFoo)
 	s.Require().NoErrorf(err, "failed to get record")
-	resSer, err = json.Marshal(res)
-	s.Require().NoErrorf(err, "failed to serialize profile")
-	profileSer, err = json.Marshal(profile)
-	s.Require().NoErrorf(err, "failed to serialize profile")
-	opts = jsondiff.DefaultConsoleOptions()
-	status, diff = jsondiff.Compare(profileSer, resSer, &opts)
-	s.Assert().Equal(jsondiff.FullMatch, status, diff)
+	s.Assert().Empty(cmp.Diff(profile, res))
 }
 
 func (s *DBSuite) Test_UserProfiles_RemoveOverLimit_Errors() {
