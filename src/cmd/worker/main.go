@@ -33,7 +33,7 @@ func main() {
 		logger.Fatal("Error while creating producer", zap.Error(err))
 	}
 
-	client, err := db.NewClientFromAddresses(logger, conf.DBAddresses...)
+	aggClient, err := db.NewClientFromAddresses(logger, conf.DBAggregatesAddresses...)
 	if err != nil {
 		logger.Fatal("Error while creating database client", zap.Error(err))
 	}
@@ -46,10 +46,10 @@ func main() {
 		defer wg.Done()
 
 		wrk := worker.New(worker.Dependencies{
-			Logger:   logger,
-			Consumer: consumer,
-			DB:       client,
-			IDGetter: getter,
+			Logger:       logger,
+			Consumer:     consumer,
+			AggregatesDB: aggClient,
+			IDGetter:     getter,
 		})
 
 		if err := wrk.Run(context.Background()); err != nil {

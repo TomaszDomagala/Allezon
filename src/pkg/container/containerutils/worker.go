@@ -28,7 +28,8 @@ var (
 			Env: []string{
 				fmt.Sprintf("PORT=%s", WorkerPort),
 				fmt.Sprintf("KAFKA_ADDRESSES=redpanda:%s", RedpandaPort),
-				fmt.Sprintf("DB_ADDRESSES=aerospike:%s", AerospikePort),
+				fmt.Sprintf("DB_PROFILES_ADDRESSES=aerospike:%s", AerospikePort),
+				fmt.Sprintf("DB_AGGREGATES_ADDRESSES=aerospike:%s", AerospikePort),
 				fmt.Sprintf("ID_GETTER_ADDRESS=idgetter:%s", IDGetterPort),
 				"LOG_LEVEL=DEBUG",
 			},
