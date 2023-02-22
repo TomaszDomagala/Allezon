@@ -18,17 +18,17 @@ type Worker interface {
 }
 
 type Dependencies struct {
-	Consumer *messaging.Consumer
-	DB       db.Client
-	Logger   *zap.Logger
-	IDGetter idGetter.Client
+	Consumer     *messaging.Consumer
+	AggregatesDB db.Client
+	Logger       *zap.Logger
+	IDGetter     idGetter.Client
 }
 
 type worker struct {
-	consumer *messaging.Consumer
-	db       db.Client
-	logger   *zap.Logger
-	idGetter idGetter.Client
+	consumer     *messaging.Consumer
+	aggregatesDB db.Client
+	logger       *zap.Logger
+	idGetter     idGetter.Client
 }
 
 const chanSize = 1024
@@ -40,7 +40,7 @@ func (w worker) Run(ctx context.Context) error {
 	defer close(tagsChan)
 
 	for i := 0; i < numProcessors; i++ {
-		go runAggregatesProcessor(tagsChan, w.idGetter, w.db.Aggregates(), w.logger)
+		go runAggregatesProcessor(tagsChan, w.idGetter, w.aggregatesDB.Aggregates(), w.logger)
 	}
 
 	if err := w.consumer.Consume(ctx, tagsChan); err != nil {
@@ -51,9 +51,9 @@ func (w worker) Run(ctx context.Context) error {
 
 func New(deps Dependencies) Worker {
 	return worker{
-		consumer: deps.Consumer,
-		db:       deps.DB,
-		logger:   deps.Logger,
-		idGetter: deps.IDGetter,
+		consumer:     deps.Consumer,
+		aggregatesDB: deps.AggregatesDB,
+		logger:       deps.Logger,
+		idGetter:     deps.IDGetter,
 	}
 }

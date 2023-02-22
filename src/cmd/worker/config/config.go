@@ -13,7 +13,7 @@ type Config struct {
 	KafkaAddresses []string `mapstructure:"kafka_addresses"`
 
 	// DB options
-	DBAddresses []string `mapstructure:"db_addresses"`
+	DBAggregatesAddresses []string `mapstructure:"db_aggregates_addresses"`
 
 	// ID Getter
 	IDGetterAddress string `mapstructure:"id_getter_address"`
@@ -30,7 +30,7 @@ func New() (*Config, error) {
 	field("log_level", "debug")
 
 	field("kafka_addresses", []string{})
-	field("db_addresses", []string{})
+	field("db_aggregates_addresses", []string{})
 	field("id_getter_address", "")
 
 	var c Config

@@ -1,7 +1,7 @@
 api:
   image:
     tag: "0.2.2"
-  replicaCount: 8
+  replicaCount: 4
   env:
     # Kafka configuration
     - name: KAFKA_NULL_PRODUCER
@@ -34,7 +34,9 @@ worker:
       value: "8080"
     - name: KAFKA_ADDRESSES
       value: "allezon-redpanda-0.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-1.allezon-redpanda.default.svc.cluster.local:9093,allezon-redpanda-2.allezon-redpanda.default.svc.cluster.local:9093"
-    - name: DB_ADDRESSES
+    - name: DB_PROFILES_ADDRESSES
+      value: "storage-profiles-aerospike-profiles-0.storage-profiles-aerospike-profiles.default.svc.cluster.local:3000,storage-profiles-aerospike-profiles-1.storage-profiles-aerospike-profiles.default.svc.cluster.local:3000,storage-profiles-aerospike-profiles-2.storage-profiles-aerospike-profiles.default.svc.cluster.local:3000"
+    - name: DB_AGGREGATES_ADDRESSES
       value: "storage-aggregates-aerospike-aggregates-0.storage-aggregates-aerospike-aggregates.default.svc.cluster.local:3000,storage-aggregates-aerospike-aggregates-1.storage-aggregates-aerospike-aggregates.default.svc.cluster.local:3000,storage-aggregates-aerospike-aggregates-2.storage-aggregates-aerospike-aggregates.default.svc.cluster.local:3000"
     - name: ID_GETTER_ADDRESS
       value: "allezon-idgetter.default.svc.cluster.local:8080"
