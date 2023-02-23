@@ -37,7 +37,7 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 	for i := 0; i < 10; i++ {
 		tagsToSend = append(tagsToSend, types.UserTag{Cookie: fmt.Sprintf("cookie-%d", i)})
 	}
-	recTags := make(chan types.UserTag)
+	recTags := make(chan UserTagMessage)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -63,7 +63,8 @@ func (s *MessagingSuite) TestConsumer_Consume() {
 	for i := 0; i < len(tagsToSend); i++ {
 		select {
 		case tag := <-recTags:
-			tagsRec = append(tagsRec, tag)
+			tagsRec = append(tagsRec, tag.Data())
+			tag.Mark()
 		case <-time.After(timeout):
 			s.FailNow("timed out waiting for tags")
 		}
@@ -124,13 +125,14 @@ func (s *MessagingSuite) TestConsumer_Consume_multiple_consumers() {
 
 			// Using a private channel for each consumer to
 			// register which consumer received which tag.
-			privateRecTags := make(chan types.UserTag)
+			privateRecTags := make(chan UserTagMessage)
 			defer close(privateRecTags)
 
 			go func() {
 				for tag := range privateRecTags {
 					consumersUsed.Store(id, true)
-					recTags <- tag
+					recTags <- tag.Data()
+					tag.Mark()
 				}
 			}()
 

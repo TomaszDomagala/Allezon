@@ -10,7 +10,6 @@ import (
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
 	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
 )
 
 type Worker interface {
@@ -36,14 +35,14 @@ const chanSize = 1024
 var numProcessors = runtime.NumCPU()
 
 func (w worker) Run(ctx context.Context) error {
-	tagsChan := make(chan types.UserTag, chanSize)
-	defer close(tagsChan)
+	messages := make(chan messaging.UserTagMessage, chanSize)
+	defer close(messages)
 
 	for i := 0; i < numProcessors; i++ {
-		go runAggregatesProcessor(tagsChan, w.idGetter, w.aggregatesDB.Aggregates(), w.logger)
+		go runAggregatesProcessor(messages, w.idGetter, w.aggregatesDB.Aggregates(), w.logger)
 	}
 
-	if err := w.consumer.Consume(ctx, tagsChan); err != nil {
+	if err := w.consumer.Consume(ctx, messages); err != nil {
 		return fmt.Errorf("error consuming messages, %w", err)
 	}
 	return nil

@@ -28,7 +28,7 @@ DOCKER_REPO ?= "registry.gitlab.com"
 DOCKER_NAMESPACE ?= "registry.gitlab.com/allezon/registry"
 
 # ALLEZON_VERSION sets the version of all docker images and is used during deployment.
-ALLEZON_VERSION ?= "0.2.2138"
+ALLEZON_VERSION ?= "0.4.1"
 
 # api service config
 API_VERSION ?= $(ALLEZON_VERSION)
