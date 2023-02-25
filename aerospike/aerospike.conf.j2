@@ -1,0 +1,50 @@
+network {
+	service {
+		address any
+		port 3000
+	}
+
+	heartbeat {
+		mode mesh
+		address any
+		port 3002
+
+		{% for svr in groups.aerospike %}
+		mesh-seed-address-port {{svr}} 3002
+		{% endfor %}
+
+		interval 150
+		timeout 10
+	}
+
+	fabric {
+		address any
+		port 3001
+	}
+
+}
+
+logging {
+    file /var/log/aerospike/aerospike.log {
+        context any warning
+    }
+}
+
+namespace allezon {
+# 	Day plus minute.
+	default-ttl 86460
+# 	Run eviction every minute
+	nsup-period 60
+
+	memory-size 8G
+	replication-factor 2
+
+	stop-writes-pct 92
+  	high-water-memory-pct 90
+  	high-water-disk-pct 90
+
+	storage-engine device {
+	    file /usr/share/aerospike/allezon
+	    filesize 20G
+	}
+}

@@ -40,11 +40,38 @@ In the `HOSTS` provide the ids of the vms that you want to use for your cluster 
 
 2. You may want to re-deploy the vms to have a clean state. Go to the [jenkins](https://mimjenkins.rtb-lab.pl) and run the ReDeployVm job on the vms that you want to re-deploy.
 
-3. Run 
-    ```bash
-    make cluster-setup
-    ```
+3. Run to set up Kubernetes cluster and setup kubectl
+   - adjust ips in `cluster/hosts.yaml`
+   - ```bash
+       make cluster-setup
+       ./kubectl-setup.sh <username> <kubeadm address(node1)>
+       ```
 
+4. Create aerospike cluster
+    - adjust ips in `aerospike/hosts`
+    - ```bash
+      ansible-playbook --extra-vars "ansible_user=<username> ansible_password=<password> ansible_ssh_extra_args='-o StrictHostKeyChecking=no'" -i aerospike/hosts aerospike/aerospike.yaml
+      ```
+
+5. Start service
+    - adjusts ip addresses in `charts/ippool/values.yaml`
+      - addresses must be outside of address range that is taken by the vms.
+    - ```bash
+      make cluster-storage-install
+      make helm-dependency-update helm-install
+      make cluster-ippool-install
+      ```
+        - this will use pre-existing docker images if you want to build them yourself you would have to change the docker repo and use target `cluster-deploy` instead of `helm-dependency-update helm-install`
+
+6. Run ELK for logs (optional)
+   - ```bash
+     make elk-operator-install
+     make elk-install
+     ```
+   - port forward and get credentials
+     ```bash
+     make elk-credentials elk-port-forward
+     ```
 
 The `cluster` ansible inventory was generated as specified in the [kubespray quick start guide](https://github.com/kubernetes-sigs/kubespray#quick-start).
 You may want to generate your own (replace hosts.yaml with your own). The `hosts-ips.sh` script can help you with obtaining the ips of the vms.

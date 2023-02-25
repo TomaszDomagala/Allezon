@@ -1,6 +1,0 @@
-dependencies:
-- name: aerospike
-  repository: https://aerospike.github.io/aerospike-kubernetes
-  version: 5.5.0
-digest: sha256:e0a7e8a9265f7635477de5acd0183e780860ced840682ff2884884477b750992
-generated: "2023-02-16T00:13:20.49182418+01:00"
