@@ -9,7 +9,7 @@ import (
 
 	"github.com/TomaszDomagala/Allezon/src/pkg/db"
 	"github.com/TomaszDomagala/Allezon/src/pkg/idGetter"
-	"github.com/TomaszDomagala/Allezon/src/pkg/types"
+	"github.com/TomaszDomagala/Allezon/src/pkg/messaging"
 )
 
 // aggregatesBackoff is a backoff strategy used to update aggregates.
@@ -24,21 +24,21 @@ var aggregatesBackoff = backoff.ExponentialBackOff{
 	Clock:               backoff.SystemClock,
 }
 
-func runAggregatesProcessor(tagsChan <-chan types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, logger *zap.Logger) {
-	for tag := range tagsChan {
-		logger.Debug("processing tag", zap.Any("tag", tag))
-		if err := updateAggregatesBackoff(tag, idsClient, aggregates, aggregatesBackoff, logger); err != nil {
+func runAggregatesProcessor(messages <-chan messaging.UserTagMessage, idsClient idGetter.Client, aggregates db.AggregatesClient, logger *zap.Logger) {
+	for msg := range messages {
+		logger.Debug("processing tag", zap.Any("tag", msg.Data()))
+		if err := updateAggregatesBackoff(msg, idsClient, aggregates, aggregatesBackoff, logger); err != nil {
 			logger.Error("error updating aggregates", zap.Error(err))
 		}
-		logger.Debug("processed tag", zap.Any("tag", tag))
+		logger.Debug("processed tag", zap.Any("tag", msg.Data()))
 	}
 }
 
 // updateAggregatesBackoff updates aggregates with the given tag and retries on error according to the given backoff strategy.
-func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient, bo backoff.ExponentialBackOff, logger *zap.Logger) error {
+func updateAggregatesBackoff(msg messaging.UserTagMessage, idsClient idGetter.Client, aggregates db.AggregatesClient, bo backoff.ExponentialBackOff, logger *zap.Logger) error {
 	err := backoff.Retry(func() error {
-		if err := updateAggregates(tag, idsClient, aggregates); err != nil {
-			logger.Warn("error processing tag", zap.Any("tag", tag), zap.Error(err))
+		if err := updateAggregates(msg, idsClient, aggregates); err != nil {
+			logger.Warn("error processing tag", zap.Any("tag", msg.Data()), zap.Error(err))
 			return err
 		}
 		return nil
@@ -49,17 +49,10 @@ func updateAggregatesBackoff(tag types.UserTag, idsClient idGetter.Client, aggre
 	return nil
 }
 
-func getId(idsClient idGetter.Client, collection string, element string) (uint16, error) {
-	id, err := idGetter.GetU16ID(idsClient, collection, element, true)
-	if err != nil {
-		return 0, fmt.Errorf("error getting %s id of tag, %w", collection, err)
-	}
-	return id, nil
-}
-
 // updateAggregates updates aggregates with the given tag.
-func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates db.AggregatesClient) (err error) {
+func updateAggregates(message messaging.UserTagMessage, idsClient idGetter.Client, aggregates db.AggregatesClient) (err error) {
 	var key db.AggregateKey
+	tag := message.Data()
 	key.CategoryId, err = getId(idsClient, idGetter.CategoryCollection, tag.ProductInfo.CategoryId)
 	if err != nil {
 		return err
@@ -76,5 +69,14 @@ func updateAggregates(tag types.UserTag, idsClient idGetter.Client, aggregates d
 	if err := aggregates.Add(key, tag); err != nil {
 		return fmt.Errorf("error updating aggregates, %w", err)
 	}
+	message.Mark()
 	return nil
+}
+
+func getId(idsClient idGetter.Client, collection string, element string) (uint16, error) {
+	id, err := idGetter.GetU16ID(idsClient, collection, element, true)
+	if err != nil {
+		return 0, fmt.Errorf("error getting %s id of tag, %w", collection, err)
+	}
+	return id, nil
 }

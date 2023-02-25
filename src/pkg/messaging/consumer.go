@@ -36,9 +36,36 @@ func NewConsumer(logger *zap.Logger, addresses []string) (*Consumer, error) {
 	return &Consumer{logger: logger, client: consumer}, nil
 }
 
+type UserTagMessage interface {
+	Data() types.UserTag
+	Mark()
+}
+
+type userTagMessage struct {
+	data        types.UserTag
+	markMessage func()
+}
+
+func (m *userTagMessage) Data() types.UserTag {
+	return m.data
+}
+
+func (m *userTagMessage) Mark() {
+	m.markMessage()
+}
+
+func newUserTagMessage(data types.UserTag, session sarama.ConsumerGroupSession, msg *sarama.ConsumerMessage) *userTagMessage {
+	return &userTagMessage{
+		data: data,
+		markMessage: func() {
+			session.MarkMessage(msg, "")
+		},
+	}
+}
+
 // Consume consumes messages and pushes them to the tags channel. It blocks until the context is cancelled or an error occurs.
 // Should be run in a goroutine.
-func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error {
+func (c *Consumer) Consume(ctx context.Context, tags chan<- UserTagMessage) error {
 	// Following code is heavily inspired by sarama example https://github.com/Shopify/sarama/blob/main/examples/consumergroup/main.go.
 
 	handler := consumerGroupHandler{
@@ -59,12 +86,13 @@ func (c *Consumer) Consume(ctx context.Context, tags chan<- types.UserTag) error
 			c.logger.Debug("consumer context cancelled", zap.Error(ctx.Err()))
 			return nil
 		}
+		c.logger.Debug("consumer loop ended, restarting")
 	}
 }
 
 type consumerGroupHandler struct {
 	logger *zap.Logger
-	tags   chan<- types.UserTag
+	tags   chan<- UserTagMessage
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
@@ -76,6 +104,7 @@ func (c *consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error {
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 func (c *consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
+	c.logger.Debug("consumer group handler cleanup")
 	return nil
 }
 
@@ -84,14 +113,16 @@ func (c *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	for {
 		select {
 		case msg := <-claim.Messages():
-			c.logger.Debug("received message", zap.ByteString("key", msg.Key), zap.ByteString("value", msg.Value), zap.String("topic", msg.Topic), zap.Int32("partition", msg.Partition), zap.Int64("offset", msg.Offset))
+			highWaterMark := claim.HighWaterMarkOffset()
+
+			c.logger.Debug("received message", zap.ByteString("key", msg.Key), zap.ByteString("value", msg.Value), zap.String("topic", msg.Topic), zap.Int32("partition", msg.Partition), zap.Int64("offset", msg.Offset), zap.Int64("highWaterMark", highWaterMark), zap.Int64("lag", highWaterMark-msg.Offset))
 			var tag types.UserTag
 			if err := types.UnmarshalUserTag(msg.Value, &tag); err != nil {
 				c.logger.Error("failed to unmarshal message", zap.Error(err))
 				continue
 			}
-			c.tags <- tag
-			session.MarkMessage(msg, "")
+
+			c.tags <- newUserTagMessage(tag, session, msg)
 		case <-session.Context().Done():
 			return nil
 		}
