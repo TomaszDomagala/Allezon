@@ -32,8 +32,16 @@ flowchart
 ```
 
 
-# Kubernetes setup on RTB House provided vms
+# Setup on RTB House provided vms
 RTB House provides us with some vms to run our kubernetes cluster. This is a guide on how to set it up.
+
+0. Install:
+   - make
+   - ansible
+   - kubectl
+   - optionally if you want to build yourself and not use prebuild images:
+     - go(1.19)
+     - docker
 
 1. Create `.vms` file in the root of this repo following the example in `.vms_example` file.
 In the `HOSTS` provide the ids of the vms that you want to use for your cluster (workers and masters).
@@ -54,6 +62,7 @@ In the `HOSTS` provide the ids of the vms that you want to use for your cluster 
       ```
 
 5. Start service
+    - adjust addresses in `charts/allezon/values.yaml` in all configs regarding DB(5) to those specified in `aerospike/hosts`
     - adjusts ip addresses in `charts/ippool/values.yaml`
       - addresses must be outside of address range that is taken by the vms.
     - ```bash
@@ -72,6 +81,11 @@ In the `HOSTS` provide the ids of the vms that you want to use for your cluster 
      ```bash
      make elk-credentials elk-port-forward
      ```
+
+7. To get IP address run, and look for external ip for allezon-api service.
+    ```bash
+    kubectl get svc
+    ```   
 
 The `cluster` ansible inventory was generated as specified in the [kubespray quick start guide](https://github.com/kubernetes-sigs/kubespray#quick-start).
 You may want to generate your own (replace hosts.yaml with your own). The `hosts-ips.sh` script can help you with obtaining the ips of the vms.
