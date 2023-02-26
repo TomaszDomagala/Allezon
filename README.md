@@ -68,7 +68,7 @@ In the `HOSTS` provide the ids of the vms that you want to use for your cluster 
      make elk-operator-install
      make elk-install
      ```
-   - port forward and get credentials
+   - port forward and get credentials(you may have to wait a bit as Kibana takes around minute to initiate)
      ```bash
      make elk-credentials elk-port-forward
      ```
