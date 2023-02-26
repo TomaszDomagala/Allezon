@@ -243,32 +243,32 @@ cluster-ippool-uninstall: ## Uninstall the LoadBalancer IP address from the remo
 	helm uninstall $(HELM_IPPOOL_RELEASE_NAME)
 
 
-AEROSPIKE_PROFILES_RELEASE_NAME ?= storage-profiles
-AEROSPIKE_AGGREGATES_RELEASE_NAME ?= storage-aggregates
-
-.PHONY: cluster-profiles-storage-install
-cluster-profiles-storage-install: ## Install the storage class for profiles on the remote cluster.
-	helm install $(AEROSPIKE_PROFILES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-profiles --set aerospike-profiles.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_profiles.conf)
-
-.PHONY: cluster-profiles-storage-uninstall
-cluster-profiles-storage-uninstall: ## Uninstall the storage class for profiles from the remote cluster.
-	helm uninstall $(AEROSPIKE_PROFILES_RELEASE_NAME)
-
-.PHONY: cluster-profiles-storage-upgrade
-cluster-profiles-storage-upgrade: ## Upgrade the storage class for profiles on the remote cluster.
-	helm upgrade $(AEROSPIKE_PROFILES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-profiles --set aerospike-profiles.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_profiles.conf)
-
-.PHONY: cluster-aggregates-storage-install
-cluster-aggregates-storage-install: ## Install the storage class for aggregates on the remote cluster.
-	helm install $(AEROSPIKE_AGGREGATES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-aggregates --set aerospike-aggregates.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_aggregates.conf)
-
-.PHONY: cluster-aggregates-storage-uninstall
-cluster-aggregates-storage-uninstall: ## Uninstall the storage class for aggregates from the remote cluster.
-	helm uninstall $(AEROSPIKE_AGGREGATES_RELEASE_NAME)
-
-.PHONY: cluster-aggregates-storage-upgrade
-cluster-aggregates-storage-upgrade: ## Upgrade the storage class for aggregates on the remote cluster.
-	helm upgrade $(AEROSPIKE_AGGREGATES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-aggregates --set aerospike-aggregates.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_aggregates.conf)
+#AEROSPIKE_PROFILES_RELEASE_NAME ?= storage-profiles
+#AEROSPIKE_AGGREGATES_RELEASE_NAME ?= storage-aggregates
+#
+#.PHONY: cluster-profiles-storage-install
+#cluster-profiles-storage-install: ## Install the storage class for profiles on the remote cluster.
+#	helm install $(AEROSPIKE_PROFILES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-profiles --set aerospike-profiles.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_profiles.conf)
+#
+#.PHONY: cluster-profiles-storage-uninstall
+#cluster-profiles-storage-uninstall: ## Uninstall the storage class for profiles from the remote cluster.
+#	helm uninstall $(AEROSPIKE_PROFILES_RELEASE_NAME)
+#
+#.PHONY: cluster-profiles-storage-upgrade
+#cluster-profiles-storage-upgrade: ## Upgrade the storage class for profiles on the remote cluster.
+#	helm upgrade $(AEROSPIKE_PROFILES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-profiles --set aerospike-profiles.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_profiles.conf)
+#
+#.PHONY: cluster-aggregates-storage-install
+#cluster-aggregates-storage-install: ## Install the storage class for aggregates on the remote cluster.
+#	helm install $(AEROSPIKE_AGGREGATES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-aggregates --set aerospike-aggregates.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_aggregates.conf)
+#
+#.PHONY: cluster-aggregates-storage-uninstall
+#cluster-aggregates-storage-uninstall: ## Uninstall the storage class for aggregates from the remote cluster.
+#	helm uninstall $(AEROSPIKE_AGGREGATES_RELEASE_NAME)
+#
+#.PHONY: cluster-aggregates-storage-upgrade
+#cluster-aggregates-storage-upgrade: ## Upgrade the storage class for aggregates on the remote cluster.
+#	helm upgrade $(AEROSPIKE_AGGREGATES_RELEASE_NAME) $(CHARTS_DIR)/aerospike-aggregates --set aerospike-aggregates.aerospikeConfFileBase64=$(shell base64 -w 0 $(CHARTS_DIR)/aerospike_aggregates.conf)
 
 
 .PHONY: cluster-storage-install
