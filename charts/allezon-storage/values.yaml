@@ -1,65 +1,65 @@
 storage:
   # 3 aerospike profiles instances, from node2 to node4
-  - persistentVolumeName: aerospike-profiles-pv-2
-    storageClassName: local-storage-aerospike-profiles
-    nodeHostName: node2
-    capacity: 19Gi
-    localPath: /usr/share/aerospike
-  - persistentVolumeName: aerospike-profiles-pv-3
-    storageClassName: local-storage-aerospike-profiles
-    nodeHostName: node3
-    capacity: 19Gi
-    localPath: /usr/share/aerospike
-  - persistentVolumeName: aerospike-profiles-pv-4
-    storageClassName: local-storage-aerospike-profiles
-    nodeHostName: node4
-    capacity: 19Gi
-    localPath: /usr/share/aerospike
+#  - persistentVolumeName: aerospike-profiles-pv-2
+#    storageClassName: local-storage-aerospike-profiles
+#    nodeHostName: node2
+#    capacity: 19Gi
+#    localPath: /usr/share/aerospike
+#  - persistentVolumeName: aerospike-profiles-pv-3
+#    storageClassName: local-storage-aerospike-profiles
+#    nodeHostName: node3
+#    capacity: 19Gi
+#    localPath: /usr/share/aerospike
+#  - persistentVolumeName: aerospike-profiles-pv-4
+#    storageClassName: local-storage-aerospike-profiles
+#    nodeHostName: node4
+#    capacity: 19Gi
+#    localPath: /usr/share/aerospike
+#
+#  # 3 aerospike aggregates instances, from node5 to node7
+#  - persistentVolumeName: aerospike-aggregates-pv-5
+#    storageClassName: local-storage-aerospike-aggregates
+#    nodeHostName: node5
+#    capacity: 16Gi
+#    localPath: /usr/share/aerospike
+#  - persistentVolumeName: aerospike-aggregates-pv-6
+#    storageClassName: local-storage-aerospike-aggregates
+#    nodeHostName: node6
+#    capacity: 16Gi
+#    localPath: /usr/share/aerospike
+#  - persistentVolumeName: aerospike-aggregates-pv-7
+#    storageClassName: local-storage-aerospike-aggregates
+#    nodeHostName: node7
+#    capacity: 16Gi
+#    localPath: /usr/share/aerospike
 
-  # 3 aerospike aggregates instances, from node5 to node7
-  - persistentVolumeName: aerospike-aggregates-pv-5
-    storageClassName: local-storage-aerospike-aggregates
-    nodeHostName: node5
-    capacity: 16Gi
-    localPath: /usr/share/aerospike
-  - persistentVolumeName: aerospike-aggregates-pv-6
-    storageClassName: local-storage-aerospike-aggregates
-    nodeHostName: node6
-    capacity: 16Gi
-    localPath: /usr/share/aerospike
-  - persistentVolumeName: aerospike-aggregates-pv-7
-    storageClassName: local-storage-aerospike-aggregates
-    nodeHostName: node7
-    capacity: 16Gi
-    localPath: /usr/share/aerospike
 
-
-  # 3 redpanda instances, from node5 to node7
+  # 3 redpanda instances, from node3 to node5
   - persistentVolumeName: redpanda-pv-5
     storageClassName: local-storage-redpanda
     nodeHostName: node5
     capacity: 3Gi
     localPath: /usr/share/redpanda
-  - persistentVolumeName: redpanda-pv-6
+  - persistentVolumeName: redpanda-pv-3
     storageClassName: local-storage-redpanda
-    nodeHostName: node6
+    nodeHostName: node3
     capacity: 3Gi
     localPath: /usr/share/redpanda
-  - persistentVolumeName: redpanda-pv-7
+  - persistentVolumeName: redpanda-pv-4
     storageClassName: local-storage-redpanda
-    nodeHostName: node7
+    nodeHostName: node4
     capacity: 3Gi
     localPath: /usr/share/redpanda
 
-  # 1 elk instance, on node 8
-  - persistentVolumeName: elk-pv-8
+  # 1 elk instance, on node 2
+  - persistentVolumeName: elk-pv-2
     storageClassName: local-storage-elk
-    nodeHostName: node8
+    nodeHostName: node2
     capacity: 18Gi
     localPath: /usr/share/elastic
 storageClass:
   - name: local-storage-elk
   - name: local-storage-redpanda
-  - name: local-storage-aerospike-profiles
-  - name: local-storage-aerospike-aggregates
+#  - name: local-storage-aerospike-profiles
+#  - name: local-storage-aerospike-aggregates
 
