@@ -32,6 +32,19 @@ flowchart
 ```
 
 
+# DB Model
+
+We use 3 sets in out Aerospike db:
+ - user_profiles:
+  - COOKIE | (VIEWS) MAP[TIMESTAMP][USER_TAG] | (BUYS) MAP[TIMESTAMP][USER_TAG]
+    - we use maps to mkae insertions atomic
+ - aggregates:
+   - stores aggregates in a format:
+   TS-ORIGIN_ID-COLLECTION_ID-BRAND_ID | TS | (VIEWS)(count <<48 | sum)| (BUYS)(count <<48 | sum)
+ - ids:
+   - list of collections, brands and origin where idx in the list is id of corresponding collection. Used to make memory footprint of agggregates smaller
+
+
 # Setup on RTB House provided vms
 RTB House provides us with some vms to run our kubernetes cluster. This is a guide on how to set it up.
 
